@@ -26,37 +26,6 @@
   import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp }
     from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-  // ★ ЗАМЕНИ НА СВОИ ДАННЫЕ ИЗ FIREBASE CONSOLE
-  const firebaseConfig = {
-apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
-  authDomain: "navigation-a08ba.firebaseapp.com",
-  projectId: "navigation-a08ba",
-  storageBucket: "navigation-a08ba.firebasestorage.app",
-  messagingSenderId: "988049632333",
-  appId: "1:988049632333:web:c1049f11704842a3d68004",
-  measurementId: "G-TS21Y81VVF"
-  };
-
-  let DB = null;
-  try {
-    const app = initializeApp(firebaseConfig);
-    DB = getDatabase(app);
-    window.__DB = DB;
-    window.__dbRef = ref;
-    window.__dbSet = set;
-    window.__dbGet = get;
-    window.__dbOnValue = onValue;
-    window.__dbUpdate = update;
-    window.__dbPush = push;
-    window.__dbTs = serverTimestamp;
-    window.__firebaseReady = true;
-    console.log('Firebase OK');
-  } catch(e) {
-    console.warn('Firebase not configured:', e.message);
-    window.__firebaseReady = false;
-  }
-</script>
-
 <style>
 /* ══ FORCE DARK — kills Telegram light theme ══ */
 :root{color-scheme:dark!important;-webkit-text-size-adjust:100%}
