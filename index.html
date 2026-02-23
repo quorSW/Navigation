@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>INVESTAT · Навигация</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
+:root{
+–bg:#07070f;–bg2:#0c0c1a;–bg3:#111122;
+–card:#111122;–card2:#18182a;
+–border:rgba(255,255,255,0.06);–bord2:rgba(255,255,255,0.10);
+–acc:#3d5af1;–acc2:#6c3de8;–glow:rgba(61,90,241,0.28);
+–ora:#e8640a;–gold:#d4a011;–grn:#0baa6e;
+–text:#eeeeff;–text2:#7777aa;–text3:#3a3a60;
+–red:#e03050;–tab-h:62px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{font-family:‘Manrope’,sans-serif;background:var(–bg);color:var(–text);height:100%;overflow:hidden}
+
+/* ── SCREENS ── */
+.screen{display:none;flex-direction:column;height:100vh}
+.screen.active{display:flex}
+
+/* ══════════════════════════════════════════════
+AUTH
+══════════════════════════════════════════════ */
+#auth-screen{background:var(–bg);position:relative;overflow:hidden}
+.orb{position:absolute;border-radius:50%;pointer-events:none}
+.o1{top:-100px;right:-80px;width:360px;height:360px;background:radial-gradient(circle,rgba(61,90,241,.16) 0%,transparent 70%)}
+.o2{bottom:-80px;left:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(108,61,232,.12) 0%,transparent 70%)}
+.auth-scroll{position:relative;z-index:1;overflow-y:auto;height:100vh;padding:0 20px 40px;-webkit-overflow-scrolling:touch}
+
+.alogo{display:flex;flex-direction:column;align-items:center;padding:48px 0 28px}
+.aring{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(–acc),var(–acc2));display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px var(–glow);margin-bottom:14px}
+.aname{font-family:‘Unbounded’,sans-serif;font-size:20px;font-weight:700;letter-spacing:.04em}
+.asub{font-size:12px;color:var(–text2);margin-top:4px;letter-spacing:.02em}
+
+.seg{display:flex;background:var(–card);border-radius:12px;padding:3px;gap:3px;margin-bottom:20px}
+.segb{flex:1;padding:10px;border:none;border-radius:9px;background:transparent;color:var(–text2);font-family:‘Manrope’,sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.segb.on{background:linear-gradient(135deg,var(–acc),var(–acc2));color:#fff;box-shadow:0 3px 14px var(–glow)}
+
+.fg{margin-bottom:12px}
+.fl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(–text2);margin-bottom:5px;letter-spacing:.07em;text-transform:uppercase}
+.fw{position:relative}
+.fi{width:100%;padding:13px 44px 13px 42px;background:var(–card2);border:1.5px solid var(–bord2);border-radius:11px;color:var(–text);font-family:‘Manrope’,sans-serif;font-size:14px;font-weight:500;outline:none;transition:border-color .2s,background .2s;-webkit-appearance:none}
+.fi:focus{border-color:var(–acc);background:rgba(61,90,241,.05)}
+.fi.er{border-color:var(–red)!important}
+.fi::placeholder{color:var(–text3)}
+.fico{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.38;display:flex;pointer-events:none}
+.feye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;opacity:.32;display:flex;transition:opacity .2s}
+.feye:hover{opacity:.65}
+
+.hint{font-size:11px;margin-top:4px;padding-left:2px;display:none}
+.hint.ok{display:block;color:var(–grn)}.hint.er{display:block;color:var(–red)}
+.sbar{height:3px;border-radius:2px;background:var(–card2);margin-top:5px;overflow:hidden}
+.sfill{height:100%;border-radius:2px;transition:width .3s,background .3s;width:0}
+
+.aerr{display:none;padding:11px 13px;border-radius:10px;font-size:12px;font-weight:500;margin-bottom:12px;line-height:1.4;background:rgba(224,48,80,.1);border:1px solid rgba(224,48,80,.22);color:#ff8099}
+.aerr.show{display:block}
+
+.abtn{width:100%;padding:15px;margin-top:6px;background:linear-gradient(135deg,var(–acc),var(–acc2));border:none;border-radius:11px;color:#fff;font-family:‘Unbounded’,sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.05em;box-shadow:0 4px 22px var(–glow);transition:transform .15s}
+.abtn:active{transform:scale(.97)}.abtn:disabled{opacity:.42;pointer-events:none}
+.alegal{text-align:center;margin-top:16px;font-size:11px;color:var(–text3);line-height:1.5}
+
+/* ══════════════════════════════════════════════
+APP SHELL
+══════════════════════════════════════════════ */
+#app-screen{background:var(–bg)}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;background:var(–bg2);border-bottom:1px solid var(–border);flex-shrink:0}
+.topbar-t{font-family:‘Unbounded’,sans-serif;font-size:15px;font-weight:700}
+.topav{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(–acc),var(–acc2));display:flex;align-items:center;justify-content:center;font-family:‘Unbounded’,sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px var(–glow)}
+
+.page{display:none;flex:1;overflow-y:auto;padding-bottom:calc(var(–tab-h) + 10px);-webkit-overflow-scrolling:touch}
+.page.active{display:block}
+
+/* ══════════════════════════════════════════════
+HOME PAGE
+══════════════════════════════════════════════ */
+.hero{margin:12px;border-radius:18px;overflow:hidden;position:relative;height:160px}
+/* Pure CSS gradient hero — no external images needed */
+.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0a1855 0%,#1e3a8a 40%,#0f1f60 70%,#070720 100%)}
+/* animated shimmer */
+.hero-bg::after{content:’’;position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%);animation:shimmer 3s ease-in-out infinite}
+@keyframes shimmer{0%,100%{opacity:0}50%{opacity:1}}
+.hero-geo{position:absolute;inset:0;overflow:hidden}
+.hero-geo::before{content:’’;position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(61,90,241,.35) 0%,transparent 65%)}
+.hero-geo::after{content:’’;position:absolute;bottom:-20px;left:20px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(108,61,232,.25) 0%,transparent 65%)}
+.hero-cnt{position:relative;z-index:2;padding:18px;height:100%;display:flex;flex-direction:column;justify-content:space-between}
+.hero-title{font-family:‘Unbounded’,sans-serif;font-size:19px;font-weight:900;line-height:1.2}
+.hero-sub{font-size:12px;color:rgba(255,255,255,.5);margin-top:3px}
+.hero-pills{display:flex;gap:7px;flex-wrap:wrap}
+.hero-pill{background:rgba(255,255,255,.12);backdrop-filter:blur(4px);border-radius:7px;padding:5px 10px;font-size:10px;font-weight:600;letter-spacing:.03em}
+
+.hs-wrap{margin:0 12px 12px;position:relative}
+.hs-in{width:100%;padding:12px 14px 12px 42px;background:var(–card2);border:1.5px solid var(–bord2);border-radius:12px;color:var(–text);font-family:‘Manrope’,sans-serif;font-size:14px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.hs-in:focus{border-color:var(–acc)}.hs-in::placeholder{color:var(–text2)}
+.hs-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.35;display:flex;pointer-events:none}
+
+.chips{display:flex;gap:7px;padding:0 12px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
+.chips::-webkit-scrollbar{display:none}
+.chip{padding:6px 14px;border-radius:20px;background:var(–card2);border:1px solid var(–bord2);color:var(–text2);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;letter-spacing:.02em}
+.chip.on{background:var(–acc);border-color:var(–acc);color:#fff}
+
+.sec{font-family:‘Unbounded’,sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(–text2);text-transform:uppercase;padding:0 12px;margin:18px 0 10px}
+
+/* category grid — CSS gradient backgrounds */
+.catgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px}
+.ccard{border-radius:14px;overflow:hidden;position:relative;cursor:pointer;aspect-ratio:1.45;transition:transform .2s}
+.ccard:active{transform:scale(.96)}
+.ccard-bg{position:absolute;inset:0;transition:transform .3s}
+.ccard:active .ccard-bg{transform:scale(1.04)}
+.ccard-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.2) 60%,transparent 100%)}
+.ccard-body{position:absolute;bottom:0;left:0;right:0;padding:9px 11px}
+.ccard-cnt{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px}
+.ccard-name{font-family:‘Unbounded’,sans-serif;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+
+/* referral banner */
+.refb{margin:0 12px 4px;background:var(–card2);border:1px solid var(–bord2);border-radius:14px;padding:13px;display:flex;align-items:center;gap:11px}
+.ri{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(–acc),var(–acc2));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rt{flex:1;min-width:0}.rt-h{font-size:13px;font-weight:700;margin-bottom:2px}
+.rt-l{font-size:11px;color:var(–text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcopy{background:var(–card);border:1px solid var(–bord2);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(–text2);cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .15s}
+.rcopy:active{background:var(–acc);color:#fff;border-color:var(–acc)}
+
+/* recent posts */
+.rlist{padding:0 12px}
+.rpost{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:13px;background:var(–card);border:1px solid var(–border);margin-bottom:8px;cursor:pointer;transition:opacity .15s}
+.rpost:active{opacity:.75}
+/* CSS gradient thumbnails */
+.rthumb{width:60px;height:60px;border-radius:10px;flex-shrink:0;position:relative;overflow:hidden}
+.rthumb::after{content:’’;position:absolute;inset:0;opacity:.3;background:linear-gradient(135deg,rgba(255,255,255,.1),transparent)}
+.ri2{flex:1;min-width:0}
+.rt2{font-size:13px;font-weight:600;line-height:1.35;margin-bottom:5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rm{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* ══════════════════════════════════════════════
+SEARCH RESULTS / POST CARDS
+══════════════════════════════════════════════ */
+.pcards{padding:0 12px}
+.pcard{background:var(–card);border-radius:14px;border:1px solid var(–border);margin-bottom:8px;cursor:pointer;overflow:hidden;transition:transform .15s}
+.pcard:active{transform:scale(.99)}
+/* CSS gradient card image */
+.pcard-img{width:100%;height:130px;position:relative;overflow:hidden}
+.pcard-img::after{content:’’;position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,.5) 100%)}
+.pcard-body{padding:12px 13px 13px}
+.pcard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.pcard-title{font-size:14px;font-weight:700;line-height:1.35;flex:1;margin-right:8px}
+.favbtn{background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;transition:transform .2s;flex-shrink:0;color:var(–text2)}
+.favbtn:active{transform:scale(1.3)}.favbtn.on{color:#fbbf24}
+.pcard-prev{font-size:12px;color:var(–text2);line-height:1.5;margin-bottom:10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pcard-foot{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* ══════════════════════════════════════════════
+COMMUNITY
+══════════════════════════════════════════════ */
+.clist{padding:12px}
+.ci{display:flex;align-items:center;gap:12px;padding:14px;background:var(–card);border-radius:13px;border:1px solid var(–border);margin-bottom:8px;cursor:pointer;transition:opacity .15s}
+.ci:active{opacity:.75}
+.ci-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ci-b{flex:1}.ci-t{font-size:14px;font-weight:600;margin-bottom:2px}.ci-s{font-size:12px;color:var(–text2)}
+.ci-arr{color:var(–text3)}
+.csec{font-family:‘Unbounded’,sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(–text2);text-transform:uppercase;padding:0 12px;margin:16px 0 8px}
+.repbox{margin:12px;border-radius:13px;background:rgba(224,48,80,.07);border:1px solid rgba(224,48,80,.18);padding:14px}
+.rept{font-size:13px;font-weight:700;color:#ff8099;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.reps{font-size:12px;color:var(–text2);line-height:1.5}
+
+/* ══════════════════════════════════════════════
+PROJECTS
+══════════════════════════════════════════════ */
+.pjitem{display:flex;align-items:center;gap:12px;padding:14px;background:var(–card);border-radius:13px;border:1px solid var(–border);margin-bottom:8px;cursor:pointer;transition:opacity .15s}
+.pjitem:active{opacity:.75}
+.pjav{width:46px;height:46px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.pjb{flex:1}.pjt{font-size:14px;font-weight:600;margin-bottom:3px}.pjs{font-size:12px;color:var(–text2)}
+.pjbdg{background:var(–acc);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;color:#fff}
+.addpj{margin:0 12px;padding:14px;background:var(–card2);border:1.5px dashed var(–bord2);border-radius:13px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;color:var(–text2);cursor:pointer;transition:all .15s}
+.addpj:active{border-color:var(–acc);color:var(–acc)}
+
+/* ══════════════════════════════════════════════
+COLLECTIONS
+══════════════════════════════════════════════ */
+/* reuses .pcards and .pcard */
+
+/* ══════════════════════════════════════════════
+AMBASSADORS
+══════════════════════════════════════════════ */
+.amhdr{margin:12px;border-radius:18px;overflow:hidden;position:relative;height:140px}
+.amhdr-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0a1855 0%,#1e3a8a 50%,#0f1f60 100%)}
+.amhdr-bg::before{content:’’;position:absolute;top:-30px;right:-30px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(61,90,241,.4) 0%,transparent 65%)}
+.amhdr-ov{position:absolute;inset:0;background:linear-gradient(135deg,rgba(61,90,241,.4),rgba(108,61,232,.3))}
+.amhdr-cnt{position:relative;z-index:2;padding:18px;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+.amhdr-t{font-family:‘Unbounded’,sans-serif;font-size:18px;font-weight:900}
+.amhdr-s{font-size:12px;color:rgba(255,255,255,.6);margin-top:3px}
+
+.amprof{margin:0 12px 10px;background:var(–card);border-radius:14px;border:1px solid var(–border);padding:15px}
+.ampt{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+.amav{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(–acc),var(–acc2));display:flex;align-items:center;justify-content:center;font-family:‘Unbounded’,sans-serif;font-size:20px;font-weight:700;color:#fff}
+.amn{font-family:‘Unbounded’,sans-serif;font-size:15px;font-weight:700}.aml{font-size:12px;color:var(–text2);margin-top:2px}
+.amstats{display:flex;gap:8px}
+.asb{flex:1;background:var(–bg3);border-radius:10px;padding:11px 8px;text-align:center}
+.asn{font-family:‘Unbounded’,sans-serif;font-size:18px;font-weight:800;color:var(–acc)}.asl{font-size:10px;color:var(–text2);margin-top:2px}
+
+.pgbox{margin:0 12px 10px;background:var(–card);border-radius:13px;border:1px solid var(–border);padding:14px}
+.pgt{font-size:13px;font-weight:700;margin-bottom:8px}
+.pgbar{height:6px;background:var(–bg3);border-radius:4px;overflow:hidden}
+.pgfill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(–acc),var(–acc2));width:0;transition:width 1s ease}
+.pgs{font-size:11px;color:var(–text2);margin-top:6px}
+
+.amref{margin:0 12px 10px;background:var(–card);border-radius:13px;border:1px solid var(–border);padding:14px}
+.amrh{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.amrl{background:var(–bg3);border-radius:9px;padding:10px 12px;font-size:12px;color:var(–text2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
+.amrl span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.amrl:active{background:var(–bg)}
+
+.lb{margin:0 12px}
+.lbi{display:flex;align-items:center;gap:10px;padding:12px;background:var(–card);border-radius:12px;border:1px solid var(–border);margin-bottom:7px}
+.lbr{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:‘Unbounded’,sans-serif;font-size:11px;font-weight:700;flex-shrink:0}
+.r1{background:linear-gradient(135deg,#d4a011,#e8c020);color:#000}.r2{background:linear-gradient(135deg,#888,#aaa);color:#000}.r3{background:linear-gradient(135deg,#9d5a2a,#c07840);color:#fff}.rn{background:var(–card2);color:var(–text2)}
+.lbav{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:‘Unbounded’,sans-serif;font-size:13px;font-weight:700;color:#fff}
+.lbn{flex:1;font-size:13px;font-weight:600}.lbs{font-family:‘Unbounded’,sans-serif;font-size:13px;font-weight:700;color:var(–acc)}
+
+.shoprow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 12px 4px}
+.shoprow::-webkit-scrollbar{display:none}
+.shopc{flex-shrink:0;width:140px;border-radius:13px;overflow:hidden;background:var(–card);border:1px solid var(–border);cursor:pointer}
+.shopi{height:85px}
+.shopb{padding:9px 10px}.shopn{font-size:11px;font-weight:700;margin-bottom:2px}.shopp{font-size:10px;color:var(–text2)}
+
+.amout{margin:10px 12px 24px;padding:14px;background:rgba(224,48,80,.09);border:1px solid rgba(224,48,80,.2);border-radius:13px;color:#ff8099;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.amout:active{background:rgba(224,48,80,.18)}
+
+/* ══════════════════════════════════════════════
+POST DETAIL
+══════════════════════════════════════════════ */
+#det{display:none;position:fixed;inset:0;background:var(–bg);z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#det.show{display:block}
+
+.dhead{padding:11px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(–border);position:sticky;top:0;background:var(–bg);z-index:10}
+.dback{width:36px;height:36px;border-radius:10px;background:var(–card);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(–text);flex-shrink:0;transition:background .15s}
+.dback:active{background:var(–card2)}
+.dht{font-size:14px;font-weight:600;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+/* CSS gradient hero in detail */
+.dhero{width:100%;height:210px;position:relative;overflow:hidden}
+.dhero::after{content:’’;position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to top,var(–bg),transparent)}
+
+.dcnt{padding:18px 18px 28px}
+.dbadges{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.dtitle{font-family:‘Unbounded’,sans-serif;font-size:20px;font-weight:800;line-height:1.25;margin-bottom:14px}
+.dbody{font-size:14px;line-height:1.78;color:rgba(238,238,255,.82);white-space:pre-line;margin-bottom:20px}
+.dtags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+
+/* ★ KEY: Watch + Conspect buttons matching the screenshot */
+.dactions{display:flex;gap:10px}
+.dbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border-radius:14px;border:none;cursor:pointer;font-family:‘Manrope’,sans-serif;font-size:14px;font-weight:700;transition:transform .15s,opacity .15s;text-decoration:none;color:#fff}
+.dbtn:active{transform:scale(.97);opacity:.9}
+.btn-watch{background:linear-gradient(135deg,var(–acc),var(–acc2));box-shadow:0 4px 18px var(–glow)}
+.btn-consp{background:var(–card2);color:var(–text);border:1.5px solid var(–bord2)}
+.btn-consp:active{background:var(–card)}
+
+/* ══════════════════════════════════════════════
+BADGES & TAGS
+══════════════════════════════════════════════ */
+.badge{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.b-post{background:rgba(61,90,241,.18);color:#818cf8}
+.b-video{background:rgba(108,61,232,.18);color:#a78bfa}
+.b-invest{background:rgba(232,100,10,.18);color:#fb923c}
+.b-case{background:rgba(212,160,17,.18);color:#fbbf24}
+.b-news{background:rgba(11,170,110,.18);color:#34d399}
+.tag{font-size:10px;color:var(–text2);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:5px}
+
+/* ══════════════════════════════════════════════
+BOTTOM NAV
+══════════════════════════════════════════════ */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(–bg2);border-top:1px solid var(–border);display:flex;align-items:stretch;z-index:50;padding-bottom:env(safe-area-inset-bottom,0px)}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 4px;cursor:pointer;color:var(–text3);transition:color .15s;border:none;background:none;min-height:var(–tab-h)}
+.ntab.on{color:var(–acc)}
+.ntab svg{width:22px;height:22px;flex-shrink:0}
+.ntabl{font-size:9px;font-weight:600;letter-spacing:.03em;line-height:1}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(var(–tab-h) + 14px);left:50%;transform:translateX(-50%) translateY(14px);background:var(–card2);border:1px solid var(–bord2);border-radius:12px;padding:10px 18px;font-size:12px;font-weight:600;opacity:0;transition:all .3s;z-index:200;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;gap:8px}
+.empt{font-family:‘Unbounded’,sans-serif;font-size:14px}.emps{font-size:12px;color:var(–text2)}
+</style>
+
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     AUTH SCREEN
+════════════════════════════════════ -->
+
+<div id="auth-screen" class="screen active">
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <div class="auth-scroll">
+    <div class="alogo">
+      <div class="aring">
+        <!-- building / invest icon -->
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+      <div class="aname">INVESTAT</div>
+      <div class="asub">Аналитика доходной недвижимости</div>
+    </div>
+
+```
+<div class="seg">
+  <button class="segb on" id="bl" onclick="sw('l')">Войти</button>
+  <button class="segb" id="br" onclick="sw('r')">Регистрация</button>
+</div>
+
+<!-- LOGIN -->
+<div id="fl">
+  <div class="aerr" id="la"></div>
+  <div class="fg">
+    <div class="fl">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      Email
+    </div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg></span>
+      <input class="fi" type="email" id="le" placeholder="example@mail.ru" autocomplete="email">
+    </div>
+  </div>
+  <div class="fg">
+    <div class="fl">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
+      Пароль
+    </div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <input class="fi" type="password" id="lp" placeholder="Введите пароль" autocomplete="current-password">
+      <button class="feye" onclick="tp('lp',this)" type="button"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+  </div>
+  <button class="abtn" onclick="doLogin()">ВОЙТИ В АККАУНТ</button>
+</div>
+
+<!-- REGISTER -->
+<div id="fr" style="display:none">
+  <div class="aerr" id="ra"></div>
+  <div class="fg">
+    <div class="fl"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Имя</div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+      <input class="fi" type="text" id="rn" placeholder="Ваше имя" oninput="vN()" autocomplete="given-name">
+    </div>
+    <div class="hint" id="hn"></div>
+  </div>
+  <div class="fg">
+    <div class="fl"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Телефон <span style="color:var(--red);margin-left:2px">*</span></div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.29 6.29l1.32-1.32a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+      <input class="fi" type="tel" id="rph" placeholder="+7 (999) 000-00-00" oninput="vPh()" autocomplete="tel">
+    </div>
+    <div class="hint" id="hph"></div>
+  </div>
+  <div class="fg">
+    <div class="fl"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email <span style="color:var(--red);margin-left:2px">*</span></div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg></span>
+      <input class="fi" type="email" id="rem" placeholder="example@mail.ru" oninput="vE()" autocomplete="email">
+    </div>
+    <div class="hint" id="hem"></div>
+  </div>
+  <div class="fg">
+    <div class="fl"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>Пароль <span style="color:var(--red);margin-left:2px">*</span></div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <input class="fi" type="password" id="rp" placeholder="Минимум 8 символов" oninput="vP()" autocomplete="new-password">
+      <button class="feye" onclick="tp('rp',this)" type="button"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <div class="sbar"><div class="sfill" id="sf"></div></div>
+    <div class="hint" id="hp"></div>
+  </div>
+  <div class="fg">
+    <div class="fl">Подтверждение пароля <span style="color:var(--red);margin-left:2px">*</span></div>
+    <div class="fw">
+      <span class="fico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></span>
+      <input class="fi" type="password" id="rp2" placeholder="Повторите пароль" oninput="vP2()" autocomplete="new-password">
+    </div>
+    <div class="hint" id="hp2"></div>
+  </div>
+  <button class="abtn" onclick="doReg()">СОЗДАТЬ АККАУНТ</button>
+</div>
+<div class="alegal">Нажимая кнопку, вы принимаете условия<br>пользовательского соглашения</div>
+```
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     APP SCREEN
+════════════════════════════════════ -->
+
+<div id="app-screen" class="screen">
+  <div class="topbar">
+    <div class="topbar-t" id="ptitle">Главная</div>
+    <div class="topav" id="topav" onclick="gt('ambassadors',document.querySelectorAll('.ntab')[4])">A</div>
+  </div>
+
+  <!-- HOME -->
+
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-geo"></div>
+      <div class="hero-cnt">
+        <div>
+          <div class="hero-title">INVESTAT</div>
+          <div class="hero-sub">Аналитика доходной недвижимости</div>
+        </div>
+        <div class="hero-pills">
+          <div class="hero-pill">До 67% годовых</div>
+          <div class="hero-pill">Разборы</div>
+          <div class="hero-pill">Кейсы</div>
+          <div class="hero-pill">Новости</div>
+        </div>
+      </div>
+    </div>
+
+```
+<div class="hs-wrap">
+  <span class="hs-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+  <input class="hs-in" type="search" id="hsi" placeholder="Найти посты, разборы, проекты..." oninput="onHS()">
+</div>
+
+<div class="chips" id="hchips">
+  <div class="chip on" onclick="setHC(this,'all')">Все</div>
+  <div class="chip" onclick="setHC(this,'invest')">Инвестиции</div>
+  <div class="chip" onclick="setHC(this,'case')">Кейсы</div>
+  <div class="chip" onclick="setHC(this,'video')">Видео</div>
+  <div class="chip" onclick="setHC(this,'news')">Новости</div>
+  <div class="chip" onclick="setHC(this,'post')">Посты</div>
+</div>
+
+<div id="hsr" style="display:none" class="pcards"></div>
+
+<div id="hdef">
+  <div class="sec">Разделы</div>
+  <div class="catgrid" id="catg"></div>
+  <div class="sec" style="margin-top:20px">Реферальная программа</div>
+  <div class="refb">
+    <div class="ri"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+    <div class="rt"><div class="rt-h">Пригласи друга</div><div class="rt-l" id="hrl">https://t.me/investat_bot?start=ref_...</div></div>
+    <div class="rcopy" onclick="cpHR()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Копировать</div>
+  </div>
+  <div class="sec">Последние посты</div>
+  <div class="rlist" id="recl"></div>
+</div>
+```
+
+  </div>
+
+  <!-- COMMUNITY -->
+
+  <div id="page-community" class="page">
+    <div class="clist">
+      <div class="ci" onclick="ol('https://t.me/+c4ekMHlWBbQzYjUy')">
+        <div class="ci-ico" style="background:linear-gradient(135deg,#0a1855,#1e3a8a)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        </div>
+        <div class="ci-b"><div class="ci-t">INVESTAT</div><div class="ci-s">Основной канал · 66 подписчиков</div></div>
+        <svg class="ci-arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="ci" onclick="showT('Скоро доступно')">
+        <div class="ci-ico" style="background:linear-gradient(135deg,#0f2040,#1a3060)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="ci-b"><div class="ci-t">Чат инвесторов</div><div class="ci-s">Обсуждения и нетворкинг</div></div>
+        <svg class="ci-arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="csec">Правила и поддержка</div>
+    <div class="clist" style="padding-top:0">
+      <div class="ci" onclick="showT('Открываем правила...')">
+        <div class="ci-ico" style="background:linear-gradient(135deg,#1a1a5a,#0f0f3a)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="ci-b"><div class="ci-t">Правила сообщества</div><div class="ci-s">Изучи перед участием</div></div>
+        <svg class="ci-arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="ci" onclick="showT('Открываем поддержку...')">
+        <div class="ci-ico" style="background:linear-gradient(135deg,#3a1800,#200e00)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="ci-b"><div class="ci-t">Служба поддержки</div><div class="ci-s">Пн–Пт 10:00 – 19:00</div></div>
+        <svg class="ci-arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="repbox">
+      <div class="rept"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Сообщить о нарушении</div>
+      <div class="reps">Если пишут в личку со спамом или заметил нарушение правил — сообщи нам, мы разберём!</div>
+    </div>
+  </div>
+
+  <!-- PROJECTS -->
+
+  <div id="page-projects" class="page">
+    <div style="padding:12px">
+      <div class="pjitem" onclick="ol('https://t.me/+c4ekMHlWBbQzYjUy')">
+        <div class="pjav" style="background:linear-gradient(135deg,#0a1855,#1e3a8a)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>
+        <div class="pjb"><div class="pjt">Канал INVESTAT</div><div class="pjs">Аналитика доходной недвижимости</div></div>
+        <span class="pjbdg">NEW</span>
+      </div>
+      <div class="pjitem" onclick="showT('Скоро доступно')">
+        <div class="pjav" style="background:linear-gradient(135deg,#062a18,#0a3a22)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div class="pjb"><div class="pjt">Портал проектов</div><div class="pjs">Рейтинг доходных проектов</div></div>
+      </div>
+      <div class="pjitem" onclick="showT('Скоро доступно')">
+        <div class="pjav" style="background:linear-gradient(135deg,#2a1200,#3a1a00)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="pjb"><div class="pjt">Аналитика рынка</div><div class="pjs">Закрытые предложения</div></div>
+      </div>
+      <div class="pjitem" onclick="showT('Скоро доступно')">
+        <div class="pjav" style="background:linear-gradient(135deg,#20082a,#2a1040)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="pjb"><div class="pjt">Закрытый клуб</div><div class="pjs">Нетворкинг инвесторов</div></div>
+      </div>
+      <div class="addpj" onclick="showT('Скоро будет доступно')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Добавить проект
+      </div>
+    </div>
+  </div>
+
+  <!-- COLLECTIONS -->
+
+  <div id="page-collections" class="page">
+    <div class="pcards" id="colllist" style="padding-top:12px"></div>
+  </div>
+
+  <!-- AMBASSADORS -->
+
+  <div id="page-ambassadors" class="page">
+    <div class="amhdr">
+      <div class="amhdr-bg"></div>
+      <div class="amhdr-ov"></div>
+      <div class="amhdr-cnt">
+        <div class="amhdr-t">Амбассадоры</div>
+        <div class="amhdr-s">Приглашай — расти в рейтинге</div>
+      </div>
+    </div>
+    <div class="amprof">
+      <div class="ampt">
+        <div class="amav" id="amav">A</div>
+        <div><div class="amn" id="amname">—</div><div class="aml">Приятель</div></div>
+      </div>
+      <div class="amstats">
+        <div class="asb"><div class="asn" id="arefs">0</div><div class="asl">Приглашено</div></div>
+        <div class="asb"><div class="asn" id="acols">0</div><div class="asl">Подборок</div></div>
+        <div class="asb"><div class="asn">0</div><div class="asl">Баллов</div></div>
+      </div>
+    </div>
+    <div class="pgbox">
+      <div class="pgt">Пригласите ещё 3 участников</div>
+      <div class="pgbar"><div class="pgfill" id="pgfill"></div></div>
+      <div class="pgs" id="pgsub">Для получения доступа к новым возможностям</div>
+    </div>
+    <div class="amref">
+      <div class="amrh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Реферальная ссылка</div>
+      <div class="amrl" onclick="cpRef()">
+        <span id="refl">https://t.me/investat_bot?start=ref_...</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </div>
+    </div>
+    <div class="sec">Рейтинг амбассадоров</div>
+    <div class="lb" id="lbd"></div>
+    <div class="sec">Магазин баллов</div>
+    <div class="shoprow">
+      <div class="shopc" onclick="showT('Скоро доступно')">
+        <div class="shopi" style="background:linear-gradient(135deg,#0a1855,#1e3a8a)"></div>
+        <div class="shopb"><div class="shopn">Курс «Инвестор»</div><div class="shopp">50 000 баллов</div></div>
+      </div>
+      <div class="shopc" onclick="showT('Скоро доступно')">
+        <div class="shopi" style="background:linear-gradient(135deg,#1a0840,#2a1260)"></div>
+        <div class="shopb"><div class="shopn">Разбор портфеля</div><div class="shopp">25 000 баллов</div></div>
+      </div>
+      <div class="shopc" onclick="showT('Скоро доступно')">
+        <div class="shopi" style="background:linear-gradient(135deg,#062a18,#0a3a22)"></div>
+        <div class="shopb"><div class="shopn">VIP-консультация</div><div class="shopp">100 000 баллов</div></div>
+      </div>
+    </div>
+    <div class="amout" onclick="doLogout()">Выйти из аккаунта</div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+
+  <nav class="bnav">
+    <button class="ntab on" onclick="gt('home',this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="ntabl">Домой</span>
+    </button>
+    <button class="ntab" onclick="gt('community',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="ntabl">О сообществе</span>
+    </button>
+    <button class="ntab" onclick="gt('projects',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="ntabl">Проекты</span>
+    </button>
+    <button class="ntab" onclick="gt('collections',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span class="ntabl">Подборки</span>
+    </button>
+    <button class="ntab" onclick="gt('ambassadors',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span class="ntabl">Амбассадоры</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════════════════════
+     POST DETAIL OVERLAY
+════════════════════════════════════ -->
+
+<div id="det">
+  <div class="dhead">
+    <button class="dback" onclick="closeDet()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="dht" id="dht">Материал</span>
+    <button class="favbtn" id="dfav" onclick="togDF()" style="flex-shrink:0;width:32px;height:32px">
+      <svg id="dfsvg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </button>
+  </div>
+  <!-- gradient hero — no external image needed -->
+  <div class="dhero" id="dhero"></div>
+  <div class="dcnt">
+    <div class="dbadges" id="dbd"></div>
+    <div class="dtitle" id="dtit"></div>
+    <div class="dbody" id="dbody"></div>
+    <div class="dtags" id="dtags"></div>
+    <!-- ★ Two action buttons matching screenshot -->
+    <div class="dactions">
+      <a class="dbtn btn-watch" id="dwatch" href="#" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Смотреть
+      </a>
+      <a class="dbtn btn-consp" id="dconsp" href="#" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Конспект
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  DATA  — посты канала INVESTAT (замени на реальные тексты)
+//  tgLink  → кнопка «Смотреть» (ссылка на пост)
+//  tgConsp → кнопка «Конспект» (ссылка на комментарий)
+// ════════════════════════════════════════════════════════
+const POSTS = [
+  {
+    id:1,
+    title:'Доходная недвижимость: как выбрать проект с доходностью 40–67% годовых',
+    content:'Портал INVESTAT собрал лучшие проекты доходной недвижимости с подтверждёнными показателями.\n\nКак отбираем проекты:\n• Проверка юридической чистоты объекта\n• Анализ финансовой модели застройщика\n• Независимая оценка рыночной стоимости\n• История выплат инвесторам\n\nТекущий рейтинг топ-проектов:\n1. Апарт-отель в Сочи — 67% годовых\n2. Коттеджный посёлок МО — 54% годовых\n3. Торговые площади СПб — 41% годовых\n\nЗакрытые предложения доступны только подписчикам канала.',
+    category:'Инвестиции', tags:'недвижимость,доходность,инвестиции',type:'invest',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#0a2040 0%,#1a4080 50%,#0a1530 100%)'
+  },
+  {
+    id:2,
+    title:'Разбор кейса: квартира в новостройке vs апарт-отель — где выгоднее',
+    content:'Сравнил два реальных объекта с одинаковым бюджетом — 5 000 000 ₽.\n\n🏢 Квартира в новостройке МО:\n• Рост стоимости за 2 года: +18%\n• Аренда: 35 000 ₽/мес\n• Итоговая доходность: ~22% годовых\n\n🏨 Апарт-отель в Сочи:\n• Рост стоимости за 2 года: +31%\n• Арендный доход: 58 000 ₽/мес\n• Итоговая доходность: ~47% годовых\n\nВывод: апарт-отель в туристических зонах обгоняет классическую аренду в 2+ раза при сопоставимых рисках.',
+    category:'Кейсы', tags:'кейс,квартира,апарт-отель,сравнение',type:'case',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#1a0a40 0%,#3a1a80 50%,#120830 100%)'
+  },
+  {
+    id:3,
+    title:'Видео: Закрытые предложения — как получить доступ к лучшим проектам',
+    content:'В новом видео рассказываю, как работает система закрытых предложений на портале INVESTAT.\n\nЧто внутри:\n— Как формируется база проектов\n— Почему часть объектов видна только участникам сообщества\n— Реальные истории инвесторов с цифрами\n— Пошаговый процесс входа в проект\n\nТакже разбираем:\n✅ Как читать финансовую модель\n✅ На что смотреть в договоре\n✅ Когда выходить из проекта\n\nДлительность: 38 минут.',
+    category:'Видео', tags:'видео,закрытые предложения,обучение',type:'video',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#0a3020 0%,#1a6040 50%,#061a10 100%)'
+  },
+  {
+    id:4,
+    title:'Аналитика: рынок доходной недвижимости в 2025 году — прогнозы и тренды',
+    content:'Подготовил большой аналитический обзор рынка на 2025 год.\n\n📈 Главные тренды:\n1. Апарт-отели в туристических зонах — рост спроса +34%\n2. Коммерческая недвижимость в регионах — недооценённый сегмент\n3. Краудлендинг в недвижимости — объём рынка удвоился\n\n⚠️ Риски:\n— Ужесточение требований к застройщикам\n— Рост стоимости строительных материалов\n— Снижение покупательской способности в ряде регионов\n\n🎯 Где искать доходность выше 40%:\nСочи, Казань, Калининград, горнолыжные курорты.',
+    category:'Аналитика', tags:'аналитика,рынок,2025,прогноз',type:'post',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#301000 0%,#602008 50%,#200a00 100%)'
+  },
+  {
+    id:5,
+    title:'Новость: ЦБ ужесточает требования — что это значит для инвесторов в недвижимость',
+    content:'Банк России ввёл новые требования к застройщикам и инвестиционным платформам.\n\nЧто изменилось:\n📌 Обязательный аудит финансовой отчётности для платформ с оборотом от 50 млн ₽\n📌 Новые стандарты раскрытия информации по проектам\n📌 Увеличение резервов для краудлендинговых платформ\n\nЧто это значит для инвесторов:\n✅ Повышается прозрачность рынка\n✅ Ненадёжные платформы уйдут с рынка\n⚠️ Краткосрочно — часть проектов заморожена на проверку\n\nПортал INVESTAT прошёл все проверки и продолжает работу в штатном режиме.',
+    category:'Новости', tags:'новости,ЦБ,регулирование',type:'news',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#002030 0%,#004060 50%,#001020 100%)'
+  },
+  {
+    id:6,
+    title:'Личный опыт: как я заработал 2 400 000 ₽ на доходной недвижимости за 18 месяцев',
+    content:'Делюсь реальным кейсом из своей практики.\n\nСтартовый капитал: 3 600 000 ₽\nОбъект: апартаменты в апарт-комплексе в Сочи\nСрок: 18 месяцев\n\nРезультат:\n💰 Арендный доход за 18 мес: 940 000 ₽\n📈 Прирост стоимости объекта: 1 460 000 ₽\n🎯 Итого заработано: 2 400 000 ₽\n🔢 Доходность: 44,4% годовых\n\nЧто помогло:\n1. Правильно выбрал управляющую компанию\n2. Купил на этапе котлована — получил максимальный дисконт\n3. Зашёл через закрытое предложение INVESTAT — цена ниже рынка на 12%\n\nПодробный разбор — в видео по кнопке ниже.',
+    category:'Кейсы', tags:'личный опыт,кейс,доходность,Сочи',type:'case',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#0a2010 0%,#1a5030 50%,#051008 100%)'
+  },
+  {
+    id:7,
+    title:'Чек-лист: 12 вопросов, которые нужно задать перед входом в проект',
+    content:'Сохрани этот чек-лист — он сэкономит тебе деньги и нервы.\n\n📋 Проверяй по каждому проекту:\n\nЮридическая часть:\n☐ Право собственности на землю\n☐ Разрешение на строительство\n☐ Договор с управляющей компанией\n☐ Эскроу-счёт или альтернативные гарантии\n\nФинансовая модель:\n☐ Откуда берётся заявленная доходность\n☐ Загрузка объекта (не верь выше 75% на старте)\n☐ Кто несёт операционные расходы\n☐ Условия выхода из проекта\n\nЗастройщик:\n☐ История сданных объектов\n☐ Финансовая устойчивость\n☐ Судебные иски\n☐ Репутация в профессиональном сообществе',
+    category:'Обучение', tags:'чек-лист,проверка,инвестиции',type:'post',
+    tgLink:'https://t.me/+c4ekMHlWBbQzYjUy',
+    tgConsp:'https://t.me/+c4ekMHlWBbQzYjUy',
+    gradient:'linear-gradient(135deg,#1a0820 0%,#401060 50%,#0f0515 100%)'
+  },
+];
+
+// CSS gradients for category cards
+const CATS = {
+  'Инвестиции': {g:'linear-gradient(135deg,#0a1855,#1e3a8a)',cnt:3},
+  'Кейсы':      {g:'linear-gradient(135deg,#1a0a40,#3a1a80)',cnt:2},
+  'Видео':      {g:'linear-gradient(135deg,#0a3020,#1a6040)',cnt:1},
+  'Аналитика':  {g:'linear-gradient(135deg,#301000,#602008)',cnt:1},
+  'Новости':    {g:'linear-gradient(135deg,#002030,#004060)',cnt:1},
+  'Обучение':   {g:'linear-gradient(135deg,#1a0820,#401060)',cnt:1},
+};
+
+const LEADERBOARD=[
+  {n:'Александр К.',sc:24,g:'linear-gradient(135deg,#0a1855,#1e3a8a)'},
+  {n:'Мария В.',sc:18,g:'linear-gradient(135deg,#1a0a40,#3a1a80)'},
+  {n:'Дмитрий П.',sc:11,g:'linear-gradient(135deg,#0a3020,#1a6040)'},
+  {n:'Ольга С.',sc:7,g:'linear-gradient(135deg,#301000,#602008)'},
+  {n:'Игорь Н.',sc:5,g:'linear-gradient(135deg,#002030,#004060)'},
+];
+
+// ════ STATE ═════════════════════════════════════════════
+let CU=null, FAVS=new Set(), HF='all', HST=null, CID=null;
+
+function gU(){try{return JSON.parse(localStorage.getItem('inv_u')||'{}')}catch{return{}}}
+function sU(u){localStorage.setItem('inv_u',JSON.stringify(u))}
+function gS(){try{return JSON.parse(localStorage.getItem('inv_s')||'null')}catch{return null}}
+function sS(u){localStorage.setItem('inv_s',JSON.stringify(u))}
+function cS(){localStorage.removeItem('inv_s')}
+function gF(id){try{return new Set(JSON.parse(localStorage.getItem('inv_f_'+id)||'[]'))}catch{return new Set()}}
+function svF(id,s){localStorage.setItem('inv_f_'+id,JSON.stringify([...s]))}
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;return h.toString(36)}
+
+window.addEventListener('load',()=>{const s=gS();if(s){CU=s;FAVS=gF(s.id);launch()}});
+
+// ════ AUTH ══════════════════════════════════════════════
+function sw(m){
+  const il=m==='l';
+  document.getElementById('bl').classList.toggle('on',il);
+  document.getElementById('br').classList.toggle('on',!il);
+  document.getElementById('fl').style.display=il?'':'none';
+  document.getElementById('fr').style.display=il?'none':'';
+  document.getElementById('la').classList.remove('show');
+  document.getElementById('ra').classList.remove('show');
+}
+
+function tp(id,btn){
+  const i=document.getElementById(id);
+  i.type=i.type==='password'?'text':'password';
+  btn.style.opacity=i.type==='text'?'0.75':'0.32';
+}
+
+function sh(elId,fiId,msg,t){
+  const h=document.getElementById(elId),f=document.getElementById(fiId);
+  h.textContent=msg;h.className='hint '+(msg?t:'');
+  if(f)f.classList.toggle('er',t==='er'&&!!msg);
+}
+
+function vN(){const v=document.getElementById('rn').value.trim();if(!v){sh('hn','rn','','');return true;}if(v.length<2){sh('hn','rn','Минимум 2 символа','er');return false;}sh('hn','rn','','ok');return true;}
+function vPh(){const v=document.getElementById('rph').value.replace(/\D/g,'');if(!v){sh('hph','rph','Обязательное поле','er');return false;}if(v.length<10){sh('hph','rph','Введите корректный номер (мин. 10 цифр)','er');return false;}sh('hph','rph','Номер корректен','ok');return true;}
+function vE(){
+  const v=document.getElementById('rem').value.trim();
+  if(!v){sh('hem','rem','Обязательное поле','er');return false;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){sh('hem','rem','Неверный формат email','er');return false;}
+  const users=gU();
+  if(Object.values(users).find(u=>u.email===v.toLowerCase())){sh('hem','rem','Email уже зарегистрирован','er');return false;}
+  sh('hem','rem','Email доступен','ok');return true;
+}
+function vP(){
+  const v=document.getElementById('rp').value;
+  const sf=document.getElementById('sf');
+  if(!v){sh('hp','rp','Обязательное поле','er');sf.style.width='0';return false;}
+  let s=0;
+  if(v.length>=8)s++;if(/[A-ZА-Я]/.test(v))s++;if(/\d/.test(v))s++;if(/[^a-zA-Zа-яА-Я0-9]/.test(v))s++;
+  const cs=['#e03050','#e8640a','#d4a011','#0baa6e'];
+  const ls=['Слабый','Средний','Хороший','Отличный'];
+  sf.style.width=(s*25)+'%';sf.style.background=cs[s-1]||'#e03050';
+  if(v.length<8){sh('hp','rp','Минимум 8 символов','er');return false;}
+  sh('hp','rp','Надёжность: '+ls[s-1],'ok');
+  if(document.getElementById('rp2').value)vP2();
+  return true;
+}
+function vP2(){const v=document.getElementById('rp').value,v2=document.getElementById('rp2').value;if(!v2){sh('hp2','rp2','Обязательное поле','er');return false;}if(v!==v2){sh('hp2','rp2','Пароли не совпадают','er');return false;}sh('hp2','rp2','Пароли совпадают','ok');return true;}
+
+function showA(id,msg){const e=document.getElementById(id);e.textContent=msg;e.classList.add('show');}
+
+function doLogin(){
+  const em=document.getElementById('le').value.trim().toLowerCase();
+  const pw=document.getElementById('lp').value;
+  document.getElementById('la').classList.remove('show');
+  if(!em||!pw){showA('la','Заполните все поля');return;}
+  const u=Object.values(gU()).find(u=>u.email===em);
+  if(!u||u.ph!==hash(pw)){showA('la','Неверный email или пароль');return;}
+  CU=u;FAVS=gF(u.id);sS(u);launch();
+}
+
+function doReg(){
+  const a=vPh(),b=vE(),c=vP(),d=vP2();
+  document.getElementById('ra').classList.remove('show');
+  if(!a||!b||!c||!d){showA('ra','Исправьте ошибки выше');return;}
+  const nm=document.getElementById('rn').value.trim();
+  const ph=document.getElementById('rph').value.replace(/\D/g,'');
+  const em=document.getElementById('rem').value.trim().toLowerCase();
+  const pw=document.getElementById('rp').value;
+  const users=gU();
+  const id=Date.now();
+  const u={id,name:nm||'Инвестор',phone:ph,email:em,ph:hash(pw),refs:0};
+  users[id]=u;sU(users);
+  CU=u;FAVS=new Set();sS(u);
+  launch();showT('Добро пожаловать в INVESTAT!');
+}
+
+function doLogout(){
+  CU=null;FAVS=new Set();cS();
+  document.getElementById('app-screen').classList.remove('active');
+  document.getElementById('auth-screen').classList.add('active');
+  ['le','lp','rn','rph','rem','rp','rp2'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('sf').style.width='0';
+  ['hn','hph','hem','hp','hp2'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent='';e.className='hint';}});
+  sw('l');
+}
+
+// ════ APP ════════════════════════════════════════════════
+function launch(){
+  document.getElementById('auth-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+  updateUI();renderHome();renderCollections();renderLB();
+}
+
+function updateUI(){
+  if(!CU)return;
+  const init=(CU.name||'I')[0].toUpperCase();
+  document.getElementById('topav').textContent=init;
+  document.getElementById('amav').textContent=init;
+  document.getElementById('amname').textContent=CU.name||'Инвестор';
+  document.getElementById('arefs').textContent=CU.refs||0;
+  document.getElementById('acols').textContent=FAVS.size;
+  const rl='https://t.me/investat_bot?start=ref_'+CU.id;
+  document.getElementById('refl').textContent=rl;
+  document.getElementById('hrl').textContent=rl;
+  const pct=Math.min((CU.refs||0)/3*100,100);
+  setTimeout(()=>{document.getElementById('pgfill').style.width=pct+'%';},500);
+  document.getElementById('pgsub').textContent=(CU.refs||0)>=3?'Уровень "Партнёр" открыт!':'Ещё '+(3-(CU.refs||0))+' приглашения до уровня "Партнёр"';
+}
+
+// ════ HOME ═══════════════════════════════════════════════
+function renderHome(){
+  // category grid
+  document.getElementById('catg').innerHTML=Object.entries(CATS).map(([name,m])=>`
+    <div class="ccard" onclick="filterByCat('${name}')">
+      <div class="ccard-bg" style="background:${m.g}"></div>
+      <div class="ccard-ov"></div>
+      <div class="ccard-body">
+        <div class="ccard-cnt">${m.cnt} материала</div>
+        <div class="ccard-name">${name}</div>
+      </div>
+    </div>`).join('');
+
+  // recent list
+  document.getElementById('recl').innerHTML=POSTS.slice(0,5).map(p=>`
+    <div class="rpost" onclick="openPost(${p.id})">
+      <div class="rthumb" style="background:${p.gradient}"></div>
+      <div class="ri2">
+        <div class="rt2">${p.title}</div>
+        <div class="rm">
+          <span class="badge ${bc(p.type)}">${tl(p.type)}</span>
+          <span style="font-size:11px;color:var(--text2)">${p.category}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+let HFtype='all';
+function onHS(){
+  clearTimeout(HST);
+  HST=setTimeout(()=>{
+    const q=document.getElementById('hsi').value.trim().toLowerCase();
+    if(!q&&HFtype==='all'){document.getElementById('hsr').style.display='none';document.getElementById('hdef').style.display='';return;}
+    document.getElementById('hdef').style.display='none';
+    document.getElementById('hsr').style.display='';
+    renderPCards(document.getElementById('hsr'),filterPosts(q,HFtype));
+  },280);
+}
+
+function setHC(el,type){
+  document.querySelectorAll('#hchips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');HFtype=type;onHS();
+  if(type!=='all'&&!document.getElementById('hsi').value){
+    document.getElementById('hdef').style.display='none';
+    document.getElementById('hsr').style.display='';
+    renderPCards(document.getElementById('hsr'),filterPosts('',type));
+  }
+}
+
+function filterByCat(cat){
+  gt('home',document.querySelectorAll('.ntab')[0]);
+  document.getElementById('hsi').value='';HFtype='all';
+  document.querySelectorAll('#hchips .chip').forEach((c,i)=>c.classList.toggle('on',i===0));
+  document.getElementById('hdef').style.display='none';
+  document.getElementById('hsr').style.display='';
+  renderPCards(document.getElementById('hsr'),POSTS.filter(p=>p.category===cat));
+}
+
+function filterPosts(q,type){
+  return POSTS.filter(p=>{
+    const mq=!q||(p.title+p.content+p.tags).toLowerCase().includes(q);
+    const mt=type==='all'||p.type===type;
+    return mq&&mt;
+  });
+}
+
+function renderPCards(el,posts){
+  if(!posts.length){el.innerHTML=`<div class="empty"><div class="empt">Ничего не найдено</div><div class="emps">Попробуйте другой запрос или фильтр</div></div>`;return;}
+  el.innerHTML=posts.map(p=>`
+    <div class="pcard" onclick="openPost(${p.id})">
+      <div class="pcard-img" style="background:${p.gradient}"></div>
+      <div class="pcard-body">
+        <div class="pcard-top">
+          <div class="pcard-title">${p.title}</div>
+          <button class="favbtn ${FAVS.has(p.id)?'on':''}" onclick="event.stopPropagation();togFav(${p.id},this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="${FAVS.has(p.id)?'#fbbf24':'none'}" stroke="${FAVS.has(p.id)?'#fbbf24':'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+        </div>
+        <div class="pcard-prev">${p.content}</div>
+        <div class="pcard-foot">
+          <span class="badge ${bc(p.type)}">${tl(p.type)}</span>
+          ${p.tags.split(',').slice(0,2).map(t=>`<span class="tag">#${t.trim()}</span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ════ COLLECTIONS ════════════════════════════════════════
+function renderCollections(){
+  const posts=POSTS.filter(p=>FAVS.has(p.id));
+  const el=document.getElementById('colllist');
+  if(!posts.length){
+    el.innerHTML=`<div class="empty">
+      <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#0a1855,#1e3a8a);margin:0 auto 14px;display:flex;align-items:center;justify-content:center">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div class="empt">Подборки пусты</div>
+      <div class="emps">Нажми на звезду в любом материале, чтобы сохранить</div>
+    </div>`;return;
+  }
+  el.innerHTML=posts.map(p=>`
+    <div class="pcard" onclick="openPost(${p.id})">
+      <div class="pcard-img" style="background:${p.gradient}"></div>
+      <div class="pcard-body">
+        <div class="pcard-top">
+          <div class="pcard-title">${p.title}</div>
+          <button class="favbtn on" onclick="event.stopPropagation();togFav(${p.id},this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+        </div>
+        <div class="pcard-prev">${p.content}</div>
+        <div class="pcard-foot"><span class="badge ${bc(p.type)}">${tl(p.type)}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function togFav(id,btn){
+  const now=FAVS.has(id);
+  if(now){FAVS.delete(id);btn.innerHTML=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;btn.classList.remove('on');}
+  else{FAVS.add(id);btn.innerHTML=`<svg width="18" height="18" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;btn.classList.add('on');showT('Добавлено в подборки');}
+  if(CU){svF(CU.id,FAVS);document.getElementById('acols').textContent=FAVS.size;}
+  if(CID===id){const sv=document.getElementById('dfsvg');const f=FAVS.has(id);sv.setAttribute('fill',f?'#fbbf24':'none');sv.setAttribute('stroke',f?'#fbbf24':'currentColor');}
+}
+
+// ════ POST DETAIL ════════════════════════════════════════
+function openPost(id){
+  const p=POSTS.find(x=>x.id===id);if(!p)return;
+  CID=id;
+  // gradient hero
+  const h=document.getElementById('dhero');
+  h.style.background=p.gradient;
+  document.getElementById('dht').textContent=p.title;
+  document.getElementById('dbd').innerHTML=`<span class="badge ${bc(p.type)}">${tl(p.type)}</span><span style="margin-left:6px;font-size:11px;color:var(--text2)">${p.category}</span>`;
+  document.getElementById('dtit').textContent=p.title;
+  document.getElementById('dbody').textContent=p.content;
+  document.getElementById('dtags').innerHTML=p.tags.split(',').map(t=>`<span class="tag">#${t.trim()}</span>`).join('');
+  // buttons
+  document.getElementById('dwatch').href=p.tgLink||'https://t.me/+c4ekMHlWBbQzYjUy';
+  document.getElementById('dconsp').href=p.tgConsp||'https://t.me/+c4ekMHlWBbQzYjUy';
+  // fav
+  const f=FAVS.has(id);const sv=document.getElementById('dfsvg');
+  sv.setAttribute('fill',f?'#fbbf24':'none');sv.setAttribute('stroke',f?'#fbbf24':'currentColor');
+  document.getElementById('det').classList.add('show');
+  document.getElementById('det').scrollTop=0;
+}
+
+function closeDet(){
+  document.getElementById('det').classList.remove('show');
+  CID=null;renderCollections();
+  const q=document.getElementById('hsi').value.trim().toLowerCase();
+  if(q||HFtype!=='all')renderPCards(document.getElementById('hsr'),filterPosts(q,HFtype));
+}
+
+function togDF(){if(CID===null)return;const b=document.getElementById('dfav');togFav(CID,b);}
+
+// ════ LEADERBOARD ════════════════════════════════════════
+function renderLB(){
+  document.getElementById('lbd').innerHTML=LEADERBOARD.map((u,i)=>{
+    const rc=['r1','r2','r3','rn','rn'][i]||'rn';
+    return `<div class="lbi">
+      <div class="lbr ${rc}">${i+1}</div>
+      <div class="lbav" style="background:${u.g}">${u.n[0]}</div>
+      <div class="lbn">${u.n}</div>
+      <div class="lbs">${u.sc}</div>
+    </div>`;
+  }).join('');
+}
+
+// ════ NAV ════════════════════════════════════════════════
+function gt(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('on');
+  const titles={home:'Главная',community:'О сообществе',projects:'Проекты',collections:'Подборки',ambassadors:'Амбассадоры'};
+  document.getElementById('ptitle').textContent=titles[name]||'';
+  if(name==='collections')renderCollections();
+  if(name==='ambassadors')updateUI();
+}
+
+// ════ UTILS ══════════════════════════════════════════════
+function bc(t){return{post:'b-post',video:'b-video',invest:'b-invest',case:'b-case',news:'b-news'}[t]||'b-post';}
+function tl(t){return{post:'Пост',video:'Видео',invest:'Инвестиции',case:'Кейс',news:'Новости'}[t]||t;}
+function ol(u){window.open(u,'_blank');}
+function cpRef(){const t=document.getElementById('refl').textContent;navigator.clipboard?.writeText(t).then(()=>showT('Ссылка скопирована')).catch(()=>showT('Скопируй ссылку вручную'));}
+function cpHR(){const t=document.getElementById('hrl').textContent;navigator.clipboard?.writeText(t).then(()=>showT('Ссылка скопирована')).catch(()=>showT('Скопируй ссылку вручную'));}
+function showT(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+</script>
+
+</body>
+</html>
