@@ -22,11 +22,11 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
-  // 1. Импортируем модули Realtime Database (ссылки ПОЛНЫЕ, не сокращай их)
+  // 1. ПОЛНЫЕ ССЫЛКИ (НЕ СОКРАЩАТЬ!)
   import { initializeApp } from 'https://www.gstatic.com';
   import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com';
 
-  // 2. Твой актуальный конфиг для проекта navigation-a08ba
+  // 2. Твой рабочий конфиг
   const firebaseConfig = {
     apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
     authDomain: "navigation-a08ba.firebaseapp.com",
@@ -45,30 +45,40 @@
     const tg = window.Telegram.WebApp;
     
     tg.ready();
+    tg.expand(); // Развернуть на весь экран
+
     const user = tg.initDataUnsafe?.user;
 
-    // 4. Сохранение данных пользователя при входе
+    // 4. Логика записи
     if (user) {
       const userRef = ref(DB, 'users/' + user.id);
+      
+      // Пытаемся обновить данные
       update(userRef, {
         first_name: user.first_name || "",
+        last_name: user.last_name || "",
         username: user.username || "n/a",
         last_visit: serverTimestamp()
-      }).then(() => {
-        console.log("✅ Данные пользователя обновлены в Realtime Database");
-      }).catch((error) => {
-        console.error("❌ Ошибка записи в базу:", error);
+      })
+      .then(() => {
+        console.log("Запись прошла успешно!");
+        // Можно включить для теста: tg.showAlert("Вы успешно добавлены в базу!");
+      })
+      .catch((error) => {
+        tg.showAlert("Ошибка базы: " + error.message);
       });
+    } else {
+      // Если открыто не через Telegram
+      console.log("Данные пользователя не найдены (вне Telegram)");
     }
 
-    // Делаем базу доступной глобально для других твоих скриптов
+    // Сохраняем базу в глобальную переменную для других функций
     window.__DB = DB;
 
   } catch(e) {
-    console.error("Критическая ошибка инициализации:", e);
+    console.error("Ошибка Firebase:", e.message);
   }
 </script>
-
 
 <style>
 /* ══ FORCE DARK — kills Telegram light theme ══ */
