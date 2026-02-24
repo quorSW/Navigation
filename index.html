@@ -210,8 +210,12 @@ html,body{font-family:'Manrope',sans-serif;background:#07070f!important;color:#e
 .rbt{flex:1;min-width:0}
 .rbth{font-size:13px;font-weight:700;margin-bottom:2px;color:#eeeeff}
 .rbtl{font-size:11px;color:#7777aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rbcp{background:#111122;border:1px solid rgba(255,255,255,.11);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#7777aa;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .15s}
-.rbcp:active{background:var(--acc);color:#fff;border-color:var(--acc)}
+@keyframes cpPop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes cpShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.cp-success{background:rgba(11,170,110,.15)!important;border-color:rgba(11,170,110,.4)!important;color:#34d399!important}
+.cp-bounce{animation:cpPop .35s ease}
+.rbcp{background:#111122;border:1px solid rgba(255,255,255,.11);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#7777aa;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .25s}
+.rbcp:active{transform:scale(.96)}
 
 /* ══════════════════════════════════
    COMMUNITY
@@ -453,7 +457,10 @@ html,body{font-family:'Manrope',sans-serif;background:#07070f!important;color:#e
       <div class="refb">
         <div class="rbico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
         <div class="rbt"><div class="rbth">Пригласи друга</div><div class="rbtl" id="hrl">t.me/navigationinvestat_bot?start=ref_...</div></div>
-        <div class="rbcp" onclick="cpHR()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Копировать</div>
+        <div class="rbcp" id="hcpbtn" onclick="cpHR()">
+          <svg id="hcpico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span id="hcptxt">Копировать</span>
+        </div>
       </div>
       <div class="sec">Последние посты</div>
       <div class="rlist" id="recl"></div>
@@ -506,7 +513,13 @@ html,body{font-family:'Manrope',sans-serif;background:#07070f!important;color:#e
     <div class="pgbox"><div class="pgt" id="pgt">До следующего уровня</div><div class="pgbar"><div class="pgfill" id="pgfill"></div></div><div class="pgs" id="pgs">Приглашайте друзей по реферальной ссылке</div></div>
     <div class="amref">
       <div class="amrh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Реферальная ссылка</div>
-      <div class="amrl" onclick="cpRef()"><span id="refl">t.me/navigationinvestat_bot?start=ref_...</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>
+      <div class="amrl" id="reflbtn" onclick="cpRef()">
+        <span id="refl">t.me/navigationinvestat_bot?start=ref_...</span>
+        <div id="reflico" style="flex-shrink:0;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#7777aa;transition:color .2s">
+          <svg id="reflsvg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span id="refltxt">Копировать</span>
+        </div>
+      </div>
     </div>
     <div class="sec">Рейтинг <span id="lb-status" style="font-size:10px;color:#3d5af1;font-family:Manrope;font-weight:600;text-transform:none;letter-spacing:0"></span></div>
     <div class="lb" id="lbd"><div class="lb-loading">Загрузка рейтинга...</div></div>
@@ -1202,28 +1215,69 @@ function gt(name,el){
 const bc=t=>({post:'b-post',video:'b-video',invest:'b-invest',case:'b-case',news:'b-news'}[t]||'b-post');
 const tl=t=>({post:'Пост',video:'Видео',invest:'Инвестиции',case:'Кейс',news:'Новости'}[t]||t);
 function ol(u){window.open(u,'_blank');}
-function cpRef(){
-  const rl='https://t.me/navigationinvestat_bot?start=ref_'+(CU?.id||'');
-  navigator.clipboard?.writeText(rl)
-    .then(()=>showT('Ссылка скопирована! ✅'))
-    .catch(()=>{
+// SVG иконки для состояний кнопки
+const SVG_COPY = `<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>`;
+const SVG_CHECK = `<polyline points="20 6 9 17 4 12"/>`;
+
+function animateCopyBtn(btnId, icoId, txtId, svgId, success){
+  const btn = document.getElementById(btnId);
+  const ico = document.getElementById(icoId);
+  const txt = document.getElementById(txtId);
+  const svg = document.getElementById(svgId);
+  if(!btn) return;
+
+  if(success){
+    // Успех — зелёный + галочка
+    btn.classList.add('cp-success','cp-bounce');
+    if(svg) svg.innerHTML = SVG_CHECK;
+    if(txt) txt.textContent = 'Скопировано!';
+    if(ico){ ico.style.color='#34d399'; }
+    setTimeout(()=>{
+      btn.classList.remove('cp-success','cp-bounce');
+      if(svg) svg.innerHTML = SVG_COPY;
+      if(txt) txt.textContent = 'Копировать';
+      if(ico){ ico.style.color=''; }
+    }, 2200);
+  } else {
+    // Ошибка — встряска
+    btn.style.animation='cpShake .3s ease';
+    if(txt) txt.textContent = 'Вручную';
+    setTimeout(()=>{ btn.style.animation=''; if(txt) txt.textContent='Копировать'; }, 1500);
+  }
+}
+
+function doCopy(text, onDone){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>onDone(true)).catch(()=>{
       // Фоллбэк для Telegram WebApp
-      const el=document.createElement('textarea');
-      el.value=rl;document.body.appendChild(el);el.select();
-      document.execCommand('copy');document.body.removeChild(el);
-      showT('Ссылка скопирована! ✅');
+      try{
+        const el=document.createElement('textarea');
+        el.value=text; el.style.cssText='position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(el); el.focus(); el.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(el);
+        onDone(ok);
+      }catch(e){ onDone(false); }
     });
+  } else {
+    try{
+      const el=document.createElement('textarea');
+      el.value=text; el.style.cssText='position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(el); el.focus(); el.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(el);
+      onDone(ok);
+    }catch(e){ onDone(false); }
+  }
+}
+
+function cpRef(){
+  const rl = 'https://t.me/navigationinvestat_bot?start=ref_'+(CU?.id||'');
+  doCopy(rl, ok => animateCopyBtn('reflbtn','reflico','refltxt','reflsvg', ok));
 }
 function cpHR(){
-  const rl='https://t.me/navigationinvestat_bot?start=ref_'+(CU?.id||'');
-  navigator.clipboard?.writeText(rl)
-    .then(()=>showT('Ссылка скопирована! ✅'))
-    .catch(()=>{
-      const el=document.createElement('textarea');
-      el.value=rl;document.body.appendChild(el);el.select();
-      document.execCommand('copy');document.body.removeChild(el);
-      showT('Ссылка скопирована! ✅');
-    });
+  const rl = 'https://t.me/navigationinvestat_bot?start=ref_'+(CU?.id||'');
+  doCopy(rl, ok => animateCopyBtn('hcpbtn','hcpbtn','hcptxt','hcpico', ok));
 }
 function showT(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
 </script>
