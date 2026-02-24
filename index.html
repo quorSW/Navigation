@@ -10,70 +10,45 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- ═══ FIREBASE ═══════════════════════════════════════════
-     ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ:
-     1. Зайди на https://console.firebase.google.com
-     2. Создай проект → "Add app" → Web
-     3. В настройках проекта скопируй firebaseConfig
-     4. Замени значения ниже на свои
-     5. В Firebase Console → Realtime Database → Создай БД
-     6. Rules поставь:
-        { "rules": { ".read": true, ".write": true } }
-        (потом ужесточи для продакшна)
-══════════════════════════════════════════════════════════ -->
 <script type="module">
-  // 1. Импортируем ТОЛЬКО Firestore (полные ссылки!)
-  import { initializeApp } from 'https://www.gstatic.com';
-  import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com';
+  import { initializeApp }
+    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import {
+    getFirestore, doc, setDoc, getDoc, getDocs,
+    collection, onSnapshot, increment, updateDoc, serverTimestamp
+  } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-  // 2. Твой конфиг
   const firebaseConfig = {
-    apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
-    authDomain: "navigation-a08ba.firebaseapp.com",
-    projectId: "navigation-a08ba",
-    storageBucket: "navigation-a08ba.firebasestorage.app",
+    apiKey:            "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
+    authDomain:        "navigation-a08ba.firebaseapp.com",
+    projectId:         "navigation-a08ba",
+    storageBucket:     "navigation-a08ba.firebasestorage.app",
     messagingSenderId: "988049632333",
-    appId: "1:988049632333:web:c1049f11704842a3d68004"
+    appId:             "1:988049632333:web:c1049f11704842a3d68004"
   };
 
   try {
-    // 3. Инициализация
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const tg = window.Telegram.WebApp;
-    
-    tg.ready();
-    const user = tg.initDataUnsafe?.user;
+    const db  = getFirestore(app);
 
-    // 4. Запись в Firestore
-    if (user) {
-      // Создаем ссылку на документ в коллекции "users" с ID пользователя
-      const userRef = doc(db, "users", user.id.toString());
-      
-      setDoc(userRef, {
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        username: user.username || "",
-        last_visit: serverTimestamp()
-      }, { merge: true }) // merge: true чтобы не затирать старые данные
-      .then(() => {
-        console.log("Firestore: Данные записаны!");
-      })
-      .catch((e) => {
-        console.error("Firestore Error:", e);
-        // Если хочешь видеть ошибку в ТГ, раскомментируй: 
-        // tg.showAlert("Ошибка Firestore: " + e.message);
-      });
-    }
-
-    // Делаем базу доступной глобально
-    window.__DB = db;
-
+    // Экспортируем в window для использования в обычных скриптах
+    window.__FS           = db;
+    window.__fsDoc        = doc;
+    window.__fsSetDoc     = setDoc;
+    window.__fsGetDoc     = getDoc;
+    window.__fsGetDocs    = getDocs;
+    window.__fsCollection = collection;
+    window.__fsOnSnapshot = onSnapshot;
+    window.__fsIncrement  = increment;
+    window.__fsUpdateDoc  = updateDoc;
+    window.__fsTs         = serverTimestamp;
+    window.__firebaseReady = true;
+    console.log('✅ Firestore ready');
   } catch(e) {
-    console.error("Firebase Init Error:", e);
+    console.warn('❌ Firestore init error:', e.message);
+    window.__firebaseReady = false;
   }
 </script>
-
 
 <style>
 /* ══ FORCE DARK — kills Telegram light theme ══ */
@@ -654,104 +629,107 @@ const gF=id=>{try{return new Set(JSON.parse(localStorage.getItem('iv_f_'+id)||'[
 const svF=(id,s)=>localStorage.setItem('iv_f_'+id,JSON.stringify([...s]));
 const hash=s=>{let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;return h.toString(36)};
 
-// ════ LEADERBOARD — работает ВСЕГДА (без Firebase) ════
-// Хранит всех зарегистрированных пользователей локально
-// + синхронизирует через window.storage если доступен
+// ════════════════════════════════════════════════════
+// FIRESTORE — рейтинг + реферальная система
+// Коллекция: "users" → документ: uid пользователя
+// Поля: name, refs, pts, col, createdAt
+// ════════════════════════════════════════════════════
 
-const LB_KEY = 'investat_leaderboard';
-
-// Читаем глобальный рейтинг
-async function lbRead(){
-  // Пробуем window.storage (общее хранилище)
-  if(window.storage){
-    try{
-      const r=await window.storage.get(LB_KEY,true);
-      if(r&&r.value) return JSON.parse(r.value);
-    }catch(e){}
-  }
-  // Фоллбэк: localStorage
-  try{return JSON.parse(localStorage.getItem(LB_KEY)||'{}')}catch{return {}}
+// Ждём пока Firebase module инициализируется
+function waitFS(cb, attempts=0){
+  if(window.__firebaseReady){ cb(); return; }
+  if(attempts > 30){ console.warn('Firestore not ready'); cb(); return; }
+  setTimeout(()=>waitFS(cb, attempts+1), 100);
 }
 
-// Пишем в глобальный рейтинг
-async function lbWrite(data){
-  if(window.storage){
-    try{ await window.storage.set(LB_KEY,JSON.stringify(data),true); return; }catch(e){}
-  }
-  localStorage.setItem(LB_KEY,JSON.stringify(data));
-}
-
-// Сохраняем текущего пользователя в рейтинг
-async function lbSaveMe(){
-  if(!CU) return;
-  const data=await lbRead();
-  data[CU.id]={name:CU.name||'Инвестор',refs:CU.refs||0,pts:CU.pts||0,col:CU.col||'#3d5af1'};
-  await lbWrite(data);
-}
-
-// Загружаем и рендерим рейтинг
-async function loadLeaderboard(){
-  // Сначала показываем заглушку с текущим пользователем
-  renderLBFallback();
-  // Сохраняем себя
-  await lbSaveMe();
-  // Читаем всех
-  const data=await lbRead();
-  const arr=Object.entries(data).map(([id,u])=>({id,...u}));
-  arr.sort((a,b)=>b.refs-a.refs||b.pts-a.pts);
-  if(arr.length>0){
-    renderLBData(arr.slice(0,10));
-    const st=document.getElementById('lb-status');
-    if(st) st.textContent=window.storage?'· live':'· local';
-  }
-}
-
-// Firebase (если настроен) — дополнительная синхронизация
-async function fbSaveUser(u){
-  if(!window.__firebaseReady)return;
+// Сохранить/обновить пользователя в Firestore
+async function fsSaveUser(u){
+  if(!window.__firebaseReady) return;
   try{
-    await window.__dbSet(window.__dbRef(window.__DB,'users/'+u.id),{
-      name:u.name||'Инвестор',refs:u.refs||0,pts:u.pts||0
+    const ref = window.__fsDoc(window.__FS, 'users', String(u.id));
+    await window.__fsSetDoc(ref, {
+      name: u.name || 'Инвестор',
+      refs: u.refs || 0,
+      pts:  u.pts  || 0,
+      col:  u.col  || '#3d5af1',
+      updatedAt: window.__fsTs()
+    }, { merge: true });
+  } catch(e){ console.warn('fsSaveUser error:', e.message); }
+}
+
+// Начислить реферал пригласившему
+async function fsAddRef(inviterId){
+  if(!window.__firebaseReady) return;
+  try{
+    const ref = window.__fsDoc(window.__FS, 'users', String(inviterId));
+    await window.__fsUpdateDoc(ref, {
+      refs: window.__fsIncrement(1),
+      pts:  window.__fsIncrement(100)
     });
-  }catch(e){}
+    // Обновляем локально если это текущий пользователь
+    const users = gU();
+    if(users[inviterId]){
+      users[inviterId].refs = (users[inviterId].refs||0) + 1;
+      users[inviterId].pts  = (users[inviterId].pts||0)  + 100;
+      sU(users);
+      if(CU && CU.id === inviterId){
+        CU.refs = users[inviterId].refs;
+        CU.pts  = users[inviterId].pts;
+        sS(CU);
+      }
+    }
+  } catch(e){ console.warn('fsAddRef error:', e.message); }
 }
 
-async function fbLoadLeaderboard(){
-  if(!window.__firebaseReady){await loadLeaderboard();return;}
+// Подписка на рейтинг (live обновления)
+let _lbUnsub = null;
+function fsListenLeaderboard(){
+  if(!window.__firebaseReady){ renderLBFallback(); return; }
+  // Отписываемся от предыдущей подписки
+  if(_lbUnsub){ _lbUnsub(); _lbUnsub=null; }
   try{
-    const r=window.__dbRef(window.__DB,'users');
-    window.__dbOnValue(r,snap=>{
-      const data=snap.val()||{};
-      const arr=Object.entries(data).map(([id,u])=>({id,name:u.name||'Инвестор',refs:u.refs||0,pts:u.pts||0,col:AVCOLORS[0]}));
-      arr.sort((a,b)=>b.refs-a.refs);
-      renderLBData(arr.slice(0,10));
-      const st=document.getElementById('lb-status');
-      if(st)st.textContent='· firebase live';
-    },{onlyOnce:false});
-  }catch(e){await loadLeaderboard();}
+    const colRef = window.__fsCollection(window.__FS, 'users');
+    _lbUnsub = window.__fsOnSnapshot(colRef, snap => {
+      const arr = [];
+      snap.forEach(d => {
+        const u = d.data();
+        arr.push({ id: d.id, name: u.name||'Инвестор', refs: u.refs||0, pts: u.pts||0, col: u.col||'#3d5af1' });
+      });
+      arr.sort((a,b) => b.refs - a.refs || b.pts - a.pts);
+      renderLBData(arr.slice(0, 10));
+      const st = document.getElementById('lb-status');
+      if(st) st.textContent = '🟢 live';
+    }, err => {
+      console.warn('Firestore snapshot error:', err.message);
+      renderLBFallback();
+    });
+  } catch(e){ renderLBFallback(); }
 }
 
-async function fbAddRef(userId){
-  if(!window.__firebaseReady)return;
-  try{
-    const r=window.__dbRef(window.__DB,'users/'+userId+'/refs');
-    const snap=await window.__dbGet(r);
-    await window.__dbSet(r,(snap.val()||0)+1);
-  }catch(e){}
+// Загрузка рейтинга — сначала показываем fallback, потом live
+function loadLeaderboard(){
+  renderLBFallback();
+  waitFS(() => {
+    fsSaveUser(CU); // сохраняем себя
+    fsListenLeaderboard();
+  });
 }
 
 // ════ BOOT ═════════════════════════════════════════
 window.addEventListener('load',()=>{
+  // ★ Читаем реферальный параметр из Telegram start_param
   try{
-    const tgData=window.Telegram?.WebApp?.initDataUnsafe;
-    const startParam=tgData?.start_param||'';
+    const tg = window.Telegram?.WebApp;
+    const startParam = tg?.initDataUnsafe?.start_param || '';
     if(startParam.startsWith('ref_')){
-      const refUserId=startParam.replace('ref_','');
-      sessionStorage.setItem('ref_from',refUserId);
+      const refId = startParam.replace('ref_','');
+      if(refId) sessionStorage.setItem('ref_from', refId);
+      console.log('Ref from:', refId);
     }
   }catch(e){}
-  const s=gS();
-  if(s){CU=s;FAVS=gF(s.id);launch();}
+
+  const s = gS();
+  if(s){ CU=s; FAVS=gF(s.id); launch(); }
 });
 
 // ════ AUTH ══════════════════════════════════════════
@@ -803,39 +781,27 @@ function doReg(){
   const a=vPh(),b=vE(),c=vP(),d=vP2();
   document.getElementById('ra').classList.remove('show');
   if(!a||!b||!c||!d){showA('ra','Исправьте ошибки выше');return;}
-  const nm=document.getElementById('rn').value.trim();
-  const ph=document.getElementById('rph').value.replace(/\D/g,'');
-  const em=document.getElementById('rem').value.trim().toLowerCase();
-  const pw=document.getElementById('rp').value;
-  const users=gU();
-  const id='u'+Date.now();
-  const col=AVCOLORS[Math.floor(Math.random()*AVCOLORS.length)];
-  const u={id,name:nm||'Инвестор',phone:ph,email:em,ph:hash(pw),refs:0,pts:0,col};
-  users[id]=u;sU(users);
-  CU=u;FAVS=new Set();sS(u);
+  const nm = document.getElementById('rn').value.trim();
+  const ph = document.getElementById('rph').value.replace(/\D/g,'');
+  const em = document.getElementById('rem').value.trim().toLowerCase();
+  const pw = document.getElementById('rp').value;
+  const users = gU();
+  const id  = 'u' + Date.now();
+  const col = AVCOLORS[Math.floor(Math.random()*AVCOLORS.length)];
+  const u   = {id, name:nm||'Инвестор', phone:ph, email:em, ph:hash(pw), refs:0, pts:0, col};
+  users[id] = u; sU(users);
+  CU = u; FAVS = new Set(); sS(u);
 
-  // Обрабатываем реферала — начисляем пригласившему
-  const refFrom=sessionStorage.getItem('ref_from');
-  if(refFrom && refFrom!==id){
-    const allUsers=gU();
-    if(allUsers[refFrom]){
-      allUsers[refFrom].refs=(allUsers[refFrom].refs||0)+1;
-      allUsers[refFrom].pts=(allUsers[refFrom].pts||0)+100;
-      sU(allUsers);
-      // Обновляем рейтинг пригласившего
-      lbRead().then(data=>{
-        if(data[refFrom]){
-          data[refFrom].refs=(data[refFrom].refs||0)+1;
-          data[refFrom].pts=(data[refFrom].pts||0)+100;
-          lbWrite(data);
-        }
-      });
-      fbAddRef(refFrom);
-    }
+  // Сохраняем в Firestore
+  waitFS(()=>{ fsSaveUser(u); });
+
+  // ★ Начисляем реферал пригласившему
+  const refFrom = sessionStorage.getItem('ref_from');
+  if(refFrom && refFrom !== id){
+    waitFS(()=>{ fsAddRef(refFrom); });
     sessionStorage.removeItem('ref_from');
   }
 
-  fbSaveUser(u);
   launch();
   showT('Добро пожаловать в INVESTAT! 🎉');
 }
@@ -857,9 +823,7 @@ function launch(){
   renderHome();
   renderCollections();
   renderLevels();
-  renderLBFallback(); // сразу показываем что-то
-  // Через 300мс загружаем реальный рейтинг
-  setTimeout(()=>loadLeaderboard(),300);
+  loadLeaderboard(); // Firestore live рейтинг
 }
 
 // ════ UI UPDATE ════════════════════════════════════
@@ -1088,7 +1052,7 @@ function gt(name,el){
   if(name==='ambassadors'){
     updateUI();
     renderLevels();
-    loadLeaderboard(); // Перезагружаем рейтинг каждый раз при открытии
+    loadLeaderboard();
   }
 }
 
