@@ -22,10 +22,10 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
-  // 1. ПРАВИЛЬНЫЕ ПОЛНЫЕ ССЫЛКИ НА МОДУЛИ
-import { initializeApp } from 'https://www.gstatic.com';
-import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { getFirestore, doc, setDoc, serverTimestamp as fsTimestamp } from 'https://www.gstatic.com';
+  // 1. ПОЛНЫЕ ССЫЛКИ (ВАЖНО: НЕ УДАЛЯЙ КОНЕЦ .js)
+  import { initializeApp } from 'https://www.gstatic.com';
+  import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com';
+  import { getFirestore, doc, setDoc, serverTimestamp as fsTimestamp } from 'https://www.gstatic.com';
 
   const firebaseConfig = {
     apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
@@ -44,34 +44,38 @@ import { getFirestore, doc, setDoc, serverTimestamp as fsTimestamp } from 'https
     const FS = getFirestore(app);
 
     const tg = window.Telegram.WebApp;
-    tg.ready(); // Сообщаем Telegram, что приложение готово
+    tg.ready();
     const user = tg.initDataUnsafe?.user;
 
     if (user) {
-      // Запись в Realtime Database
+      // ПИШЕМ В REALTIME DATABASE
       update(ref(DB, 'users/' + user.id), {
         name: user.first_name,
         last_visit: serverTimestamp()
       });
 
-      // Запись в Cloud Firestore
-      setDoc(doc(FS, "users", user.id.toString()), {
+      // ПИШЕМ В CLOUD FIRESTORE
+      const fsRef = doc(FS, "users", user.id.toString());
+      setDoc(fsRef, {
         first_name: user.first_name,
         username: user.username || "n/a",
         registered: fsTimestamp()
       }, { merge: true })
-      .then(() => console.log("Firestore OK"))
-      .catch(e => console.error("Firestore Error:", e));
+      .then(() => {
+        console.log("Firestore OK");
+        // alert("УРА! Firestore создала коллекцию и записала тебя!"); 
+      })
+      .catch(e => alert("Ошибка записи: " + e.message));
     }
 
     window.__DB = DB;
     window.__FS = FS;
-    console.log('Firebase System Online!');
 
   } catch(e) {
-    console.error('Firebase setup failed:', e);
+    alert("Ошибка инициализации: " + e.message);
   }
 </script>
+
 
 <style>
 /* ══ FORCE DARK — kills Telegram light theme ══ */
