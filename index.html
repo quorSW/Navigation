@@ -22,63 +22,58 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
-  // 1. ПОЛНЫЕ ССЫЛКИ (НЕ СОКРАЩАТЬ!)
+  // 1. Импортируем ТОЛЬКО Firestore (полные ссылки!)
   import { initializeApp } from 'https://www.gstatic.com';
-  import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com';
+  import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com';
 
-  // 2. Твой рабочий конфиг
+  // 2. Твой конфиг
   const firebaseConfig = {
     apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
     authDomain: "navigation-a08ba.firebaseapp.com",
-    databaseURL: "https://navigation-a08ba-default-rtdb.firebaseio.com", 
     projectId: "navigation-a08ba",
     storageBucket: "navigation-a08ba.firebasestorage.app",
     messagingSenderId: "988049632333",
-    appId: "1:988049632333:web:c1049f11704842a3d68004",
-    measurementId: "G-TS21Y81VVF"
+    appId: "1:988049632333:web:c1049f11704842a3d68004"
   };
 
   try {
     // 3. Инициализация
     const app = initializeApp(firebaseConfig);
-    const DB = getDatabase(app);
+    const db = getFirestore(app);
     const tg = window.Telegram.WebApp;
     
     tg.ready();
-    tg.expand(); // Развернуть на весь экран
-
     const user = tg.initDataUnsafe?.user;
 
-    // 4. Логика записи
+    // 4. Запись в Firestore
     if (user) {
-      const userRef = ref(DB, 'users/' + user.id);
+      // Создаем ссылку на документ в коллекции "users" с ID пользователя
+      const userRef = doc(db, "users", user.id.toString());
       
-      // Пытаемся обновить данные
-      update(userRef, {
+      setDoc(userRef, {
         first_name: user.first_name || "",
         last_name: user.last_name || "",
-        username: user.username || "n/a",
+        username: user.username || "",
         last_visit: serverTimestamp()
-      })
+      }, { merge: true }) // merge: true чтобы не затирать старые данные
       .then(() => {
-        console.log("Запись прошла успешно!");
-        // Можно включить для теста: tg.showAlert("Вы успешно добавлены в базу!");
+        console.log("Firestore: Данные записаны!");
       })
-      .catch((error) => {
-        tg.showAlert("Ошибка базы: " + error.message);
+      .catch((e) => {
+        console.error("Firestore Error:", e);
+        // Если хочешь видеть ошибку в ТГ, раскомментируй: 
+        // tg.showAlert("Ошибка Firestore: " + e.message);
       });
-    } else {
-      // Если открыто не через Telegram
-      console.log("Данные пользователя не найдены (вне Telegram)");
     }
 
-    // Сохраняем базу в глобальную переменную для других функций
-    window.__DB = DB;
+    // Делаем базу доступной глобально
+    window.__DB = db;
 
   } catch(e) {
-    console.error("Ошибка Firebase:", e.message);
+    console.error("Firebase Init Error:", e);
   }
 </script>
+
 
 <style>
 /* ══ FORCE DARK — kills Telegram light theme ══ */
