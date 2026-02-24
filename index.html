@@ -648,10 +648,11 @@ async function fsSaveUser(u){
   try{
     const ref = window.__fsDoc(window.__FS, 'users', String(u.id));
     await window.__fsSetDoc(ref, {
-      name: u.name || 'Инвестор',
-      refs: u.refs || 0,
-      pts:  u.pts  || 0,
-      col:  u.col  || '#3d5af1',
+      name:     u.name     || 'Инвестор',
+      username: u.username || '',
+      refs:     u.refs     || 0,
+      pts:      u.pts      || 0,
+      col:      u.col      || '#3d5af1',
       updatedAt: window.__fsTs()
     }, { merge: true });
   } catch(e){ console.warn('fsSaveUser error:', e.message); }
@@ -693,7 +694,14 @@ function fsListenLeaderboard(){
       const arr = [];
       snap.forEach(d => {
         const u = d.data();
-        arr.push({ id: d.id, name: u.name||'Инвестор', refs: u.refs||0, pts: u.pts||0, col: u.col||'#3d5af1' });
+        arr.push({
+          id:       d.id,
+          name:     u.name     || 'Инвестор',
+          username: u.username || '',
+          refs:     u.refs     || 0,
+          pts:      u.pts      || 0,
+          col:      u.col      || '#3d5af1'
+        });
       });
       arr.sort((a,b) => b.refs - a.refs || b.pts - a.pts);
       renderLBData(arr.slice(0, 10));
@@ -717,14 +725,27 @@ function loadLeaderboard(){
 
 // ════ BOOT ═════════════════════════════════════════
 window.addEventListener('load',()=>{
-  // ★ Читаем реферальный параметр из Telegram start_param
   try{
     const tg = window.Telegram?.WebApp;
-    const startParam = tg?.initDataUnsafe?.start_param || '';
-    if(startParam.startsWith('ref_')){
-      const refId = startParam.replace('ref_','');
-      if(refId) sessionStorage.setItem('ref_from', refId);
-      console.log('Ref from:', refId);
+    if(tg){
+      const tgUser = tg?.initDataUnsafe?.user;
+      if(tgUser){
+        // ★ ID = чистый числовой Telegram ID (именно он идёт в реферальную ссылку)
+        window.__tgUser = {
+          id:       String(tgUser.id),   // "123456789" — настоящий TG ID
+          name:     [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ')
+                    || tgUser.username || 'Инвестор',
+          username: tgUser.username || '',
+        };
+        const rnEl = document.getElementById('rn');
+        if(rnEl && !rnEl.value) rnEl.value = window.__tgUser.name;
+      }
+      // ★ Читаем реферальный параметр — он содержит TG ID пригласившего
+      const startParam = tg?.initDataUnsafe?.start_param || '';
+      if(startParam.startsWith('ref_')){
+        const refId = startParam.replace('ref_','');
+        if(refId) sessionStorage.setItem('ref_from', refId);
+      }
     }
   }catch(e){}
 
@@ -775,27 +796,61 @@ function doLogin(){
   if(!em||!pw){showA('la','Заполните все поля');return;}
   const u=Object.values(gU()).find(u=>u.email===em);
   if(!u||u.ph!==hash(pw)){showA('la','Неверный email или пароль');return;}
-  CU=u;FAVS=gF(u.id);sS(u);launch();
+
+  // ★ Если есть TG данные и у пользователя старый u-формат ID — мигрируем
+  const tgU = window.__tgUser;
+  if(tgU && tgU.id && u.id !== tgU.id && u.id.startsWith('u')){
+    const users = gU();
+    const newU = {...u, id: tgU.id, name: tgU.name||u.name, username: tgU.username||''};
+    delete users[u.id];
+    users[tgU.id] = newU;
+    sU(users);
+    CU = newU;
+    FAVS = gF(tgU.id);
+    sS(newU);
+    waitFS(()=>{ fsSaveUser(newU); });
+  } else {
+    CU=u; FAVS=gF(u.id); sS(u);
+    waitFS(()=>{ fsSaveUser(u); });
+  }
+  launch();
 }
 function doReg(){
   const a=vPh(),b=vE(),c=vP(),d=vP2();
   document.getElementById('ra').classList.remove('show');
   if(!a||!b||!c||!d){showA('ra','Исправьте ошибки выше');return;}
-  const nm = document.getElementById('rn').value.trim();
-  const ph = document.getElementById('rph').value.replace(/\D/g,'');
-  const em = document.getElementById('rem').value.trim().toLowerCase();
-  const pw = document.getElementById('rp').value;
-  const users = gU();
-  const id  = 'u' + Date.now();
-  const col = AVCOLORS[Math.floor(Math.random()*AVCOLORS.length)];
-  const u   = {id, name:nm||'Инвестор', phone:ph, email:em, ph:hash(pw), refs:0, pts:0, col};
-  users[id] = u; sU(users);
-  CU = u; FAVS = new Set(); sS(u);
 
-  // Сохраняем в Firestore
+  const tgU  = window.__tgUser;
+  const nm   = document.getElementById('rn').value.trim() || tgU?.name || 'Инвестор';
+  const ph   = document.getElementById('rph').value.replace(/\D/g,'');
+  const em   = document.getElementById('rem').value.trim().toLowerCase();
+  const pw   = document.getElementById('rp').value;
+  const users = gU();
+
+  // ★ ГЛАВНЫЙ ФИX: ID = Telegram numeric ID если есть, иначе timestamp
+  // Это тот же ID что идёт в реферальную ссылку
+  const id  = tgU?.id || String(Date.now());
+  const col = AVCOLORS[Math.floor(Math.random()*AVCOLORS.length)];
+
+  const existing = users[id];
+  const u = {
+    id,
+    name:     nm,
+    username: tgU?.username || '',
+    phone:    ph,
+    email:    em,
+    ph:       hash(pw),
+    refs:     existing?.refs || 0,
+    pts:      existing?.pts  || 0,
+    col:      existing?.col  || col
+  };
+  users[id] = u; sU(users);
+  CU = u; FAVS = gF(id); sS(u);
+
+  // Сохраняем в Firestore — документ с ID = Telegram ID
   waitFS(()=>{ fsSaveUser(u); });
 
-  // ★ Начисляем реферал пригласившему
+  // Начисляем реферал пригласившему
   const refFrom = sessionStorage.getItem('ref_from');
   if(refFrom && refFrom !== id){
     waitFS(()=>{ fsAddRef(refFrom); });
@@ -989,34 +1044,55 @@ function togFav(id,btn){
 }
 
 // ════ LEADERBOARD ═══════════════════════════════════
-// Статичный фоллбэк пока Firebase не загрузился
 function renderLBFallback(){
-  const demo=[
-    {name:'Александр К.',refs:24,col:'#0a1855'},
-    {name:'Мария В.',    refs:18,col:'#1a0840'},
-    {name:'Дмитрий П.',  refs:11,col:'#0a3020'},
-    {name:'Ольга С.',    refs:7, col:'#301000'},
-    {name:'Игорь Н.',    refs:5, col:'#002030'},
-  ];
-  // Добавляем текущего пользователя если есть рефералы
-  if(CU&&(CU.refs||0)>0){
-    demo.push({name:CU.name||'Вы',refs:CU.refs||0,col:CU.col||'#3d5af1',isMe:true});
-    demo.sort((a,b)=>b.refs-a.refs);
+  // Пока Firestore грузится — показываем skeleton + текущего пользователя
+  const el = document.getElementById('lbd');
+  if(!el) return;
+  let html = '';
+  // Если текущий пользователь есть — добавляем его сразу
+  if(CU){
+    html += lbRow({id:CU.id, name:CU.name, username:CU.username||'', refs:CU.refs||0, col:CU.col}, 0, true);
   }
-  renderLBData(demo.slice(0,8));
+  // Skeleton строки
+  for(let i=CU?1:0;i<5;i++){
+    html += `<div class="lbi" style="opacity:.35">
+      <div class="lbr rn">${i+(CU?2:1)}</div>
+      <div class="lbav" style="background:#18182a"></div>
+      <div class="lbn" style="background:#18182a;border-radius:6px;height:14px;width:120px;margin:4px 0"></div>
+      <div class="lbs" style="background:#18182a;border-radius:6px;height:14px;width:24px"></div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function lbRow(u, i, forceMe=false){
+  const me = forceMe || (CU && u.id === CU.id);
+  const rc = ['r1','r2','r3'][i] || 'rn';
+  // Показываем имя + @username если есть
+  const displayName = u.name || 'Инвестор';
+  const usernameTag = u.username ? `<span style="font-size:10px;color:#7777aa;margin-left:4px">@${u.username}</span>` : '';
+  const meTag       = me ? `<span style="font-size:10px;color:var(--acc);margin-left:4px">(вы)</span>` : '';
+  return `<div class="lbi${me?' me':''}">
+    <div class="lbr ${rc}">${i+1}</div>
+    <div class="lbav" style="background:${u.col||AVCOLORS[i%AVCOLORS.length]}">${displayName[0].toUpperCase()}</div>
+    <div style="flex:1;min-width:0">
+      <div class="lbn${me?' me':''}" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
+        ${displayName}${usernameTag}${meTag}
+      </div>
+      <div style="font-size:10px;color:#7777aa;margin-top:1px">${u.refs||0} ${(u.refs||0)===1?'приглашение':'приглашений'}</div>
+    </div>
+    <div class="lbs">${u.refs||0}</div>
+  </div>`;
 }
 
 function renderLBData(arr){
-  document.getElementById('lbd').innerHTML=arr.map((u,i)=>{
-    const me=u.isMe||(CU&&u.id===CU.id);
-    const rc=['r1','r2','r3','rn','rn','rn','rn','rn','rn','rn'][i]||'rn';
-    return `<div class="lbi${me?' me':''}">
-      <div class="lbr ${rc}">${i+1}</div>
-      <div class="lbav" style="background:${u.col||AVCOLORS[i%AVCOLORS.length]}">${(u.name||'?')[0]}</div>
-      <div class="lbn${me?' me':''}">${u.name}${me?' (вы)':''}</div>
-      <div class="lbs">${u.refs||0}</div>
-    </div>`;
-  }).join('');
+  const el = document.getElementById('lbd');
+  if(!el) return;
+  if(!arr.length){
+    el.innerHTML=`<div style="text-align:center;padding:24px;font-size:13px;color:#7777aa">Рейтинг пока пуст — пригласи первого!</div>`;
+    return;
+  }
+  el.innerHTML = arr.map((u,i) => lbRow(u, i)).join('');
 }
 
 // ════ POST DETAIL ════════════════════════════════════
