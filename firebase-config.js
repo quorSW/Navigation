@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com";
-import { getFirestore } from "https://www.gstatic.com";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
@@ -12,4 +12,32 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+const db = getFirestore(app);
+const tg = window.Telegram.WebApp;
+
+tg.ready();
+
+// Находим все кнопки "Выбрать"
+document.querySelectorAll('.select-button').forEach(button => {
+    button.addEventListener('click', async () => {
+        const user = tg.initDataUnsafe?.user;
+        
+        if (user) {
+            try {
+                // Записываем в коллекцию "users" документ с ID пользователя
+                await setDoc(doc(db, "users", user.id.toString()), {
+                    first_name: user.first_name,
+                    username: user.username || "hidden",
+                    last_click: new Date().toISOString()
+                }, { merge: true }); // merge: true чтобы не затирать старые данные
+                
+                tg.showAlert("Готово! Ты в базе.");
+            } catch (e) {
+                console.error(e);
+                tg.showAlert("Ошибка доступа! Проверь Rules в Firebase.");
+            }
+        } else {
+            alert("Запусти приложение через Telegram");
+        }
+    });
+});
