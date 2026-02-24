@@ -52,7 +52,21 @@ const firebaseConfig = {
     window.__dbPush = push;
     window.__dbTs = serverTimestamp;
     window.__firebaseReady = true;
-    console.log('Firebase OK');
+    console.log('Firebase OK');    // Сохранение пользователя Telegram в базу
+    const tg = window.Telegram.WebApp;
+    const user = tg.initDataUnsafe?.user;
+
+    if (user && DB) {
+      const userRef = ref(DB, 'users/' + user.id);
+      update(userRef, {
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        username: user.username || "",
+        last_visit: serverTimestamp()
+      }).then(() => console.log('User saved to Firebase'))
+        .catch(err => console.error('Save error:', err));
+    }
+
   } catch(e) {
     console.warn('Firebase not configured:', e.message);
     window.__firebaseReady = false;
