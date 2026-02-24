@@ -22,16 +22,9 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
+  // 1. ПРАВИЛЬНЫЕ ПОЛНЫЕ ССЫЛКИ НА МОДУЛИ
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-  import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp }
-    from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-
-  // ★ ЗАМЕНИ НА СВОИ ДАННЫЕ ИЗ FIREBASE CONSOLE
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-<script type="module">
-  // 1. Импортируем оба модуля: и Database, и Firestore
-  import { initializeApp } from 'https://www.gstatic.com';
-  import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com';
+  import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
   import { getFirestore, doc, setDoc, serverTimestamp as fsTimestamp } from 'https://www.gstatic.com';
 
   const firebaseConfig = {
@@ -47,26 +40,22 @@
 
   try {
     const app = initializeApp(firebaseConfig);
-    
-    // Инициализируем обе базы
     const DB = getDatabase(app);
     const FS = getFirestore(app);
 
     const tg = window.Telegram.WebApp;
+    tg.ready(); // Сообщаем Telegram, что приложение готово
     const user = tg.initDataUnsafe?.user;
 
     if (user) {
-      // ПИШЕМ В REALTIME DATABASE (ветка users)
-      const rtRef = ref(DB, 'users/' + user.id);
-      update(rtRef, {
+      // Запись в Realtime Database
+      update(ref(DB, 'users/' + user.id), {
         name: user.first_name,
         last_visit: serverTimestamp()
       });
 
-      // ПИШЕМ В CLOUD FIRESTORE (коллекция users)
-      // Коллекция создастся автоматически при первой записи!
-      const fsRef = doc(FS, "users", user.id.toString());
-      setDoc(fsRef, {
+      // Запись в Cloud Firestore
+      setDoc(doc(FS, "users", user.id.toString()), {
         first_name: user.first_name,
         username: user.username || "n/a",
         registered: fsTimestamp()
@@ -75,10 +64,9 @@
       .catch(e => console.error("Firestore Error:", e));
     }
 
-    // Сохраняем ссылки для доступа из других скриптов
     window.__DB = DB;
     window.__FS = FS;
-    console.log('All Firebase Systems Go!');
+    console.log('Firebase System Online!');
 
   } catch(e) {
     console.error('Firebase setup failed:', e);
