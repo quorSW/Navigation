@@ -22,7 +22,7 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
-  // 1. ПОЛНЫЕ ССЫЛКИ (ВАЖНО: НЕ УДАЛЯЙ КОНЕЦ .js)
+  // ВНИМАНИЕ: Ссылки должны быть ПОЛНЫМИ до самого конца .js
   import { initializeApp } from 'https://www.gstatic.com';
   import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com';
   import { getFirestore, doc, setDoc, serverTimestamp as fsTimestamp } from 'https://www.gstatic.com';
@@ -48,13 +48,14 @@
     const user = tg.initDataUnsafe?.user;
 
     if (user) {
-      // ПИШЕМ В REALTIME DATABASE
+      // 1. Запись в Realtime Database
       update(ref(DB, 'users/' + user.id), {
         name: user.first_name,
         last_visit: serverTimestamp()
       });
 
-      // ПИШЕМ В CLOUD FIRESTORE
+      // 2. Запись в Cloud Firestore
+      // Мы используем alert, чтобы ты точно увидел результат в Telegram!
       const fsRef = doc(FS, "users", user.id.toString());
       setDoc(fsRef, {
         first_name: user.first_name,
@@ -63,16 +64,22 @@
       }, { merge: true })
       .then(() => {
         console.log("Firestore OK");
-        // alert("УРА! Firestore создала коллекцию и записала тебя!"); 
+        // Если увидишь это в Telegram — значит коллекция СОЗДАНА!
+        tg.showAlert("✅ Данные успешно записаны в Firestore!");
       })
-      .catch(e => alert("Ошибка записи: " + e.message));
+      .catch(e => {
+        tg.showAlert("❌ Ошибка записи: " + e.message);
+      });
+    } else {
+      // Если ты открыл не через Telegram, записи НЕ БУДЕТ
+      console.warn("User not found (not in Telegram)");
     }
 
     window.__DB = DB;
     window.__FS = FS;
 
   } catch(e) {
-    alert("Ошибка инициализации: " + e.message);
+    console.error("Setup Error:", e);
   }
 </script>
 
