@@ -646,16 +646,65 @@ function waitFS(cb, attempts=0){
 async function fsSaveUser(u){
   if(!window.__firebaseReady) return;
   try{
-    const ref = window.__fsDoc(window.__FS, 'users', String(u.id));
+    const tgU = window.__tgUser || {};
+    const now  = new Date();
+    const ref  = window.__fsDoc(window.__FS, 'users', String(u.id));
+
+    // Читаем существующий документ чтобы не затереть createdAt
+    let createdAt = window.__fsTs();
+    try{
+      const snap = await window.__fsGetDoc(ref);
+      if(snap.exists()) createdAt = snap.data().createdAt || window.__fsTs();
+    }catch(e){}
+
     await window.__fsSetDoc(ref, {
-      name:     u.name     || 'Инвестор',
-      username: u.username || '',
-      refs:     u.refs     || 0,
-      pts:      u.pts      || 0,
-      col:      u.col      || '#3d5af1',
-      updatedAt: window.__fsTs()
+      // ══ Идентификация ══
+      id:           String(u.id),
+      telegramId:   tgU.id   || u.id || '',
+      username:     u.username || tgU.username || '',
+
+      // ══ Личные данные ══
+      name:         u.name  || 'Инвестор',
+      firstName:    tgU.firstName || u.name?.split(' ')[0] || '',
+      lastName:     tgU.lastName  || u.name?.split(' ')[1] || '',
+      phone:        u.phone || '',
+      email:        u.email || '',
+
+      // ══ Реферальная система ══
+      refs:         u.refs  || 0,
+      refLink:      `https://t.me/navigationinvestat_bot?start=ref_${u.id}`,
+      invitedBy:    sessionStorage.getItem('ref_from') || '',
+
+      // ══ Баллы и уровень ══
+      pts:          u.pts   || 0,
+      level:        _getLevelName(u.refs || 0),
+
+      // ══ Аватар ══
+      col:          u.col   || '#3d5af1',
+      photoUrl:     tgU.photo || '',
+
+      // ══ Активность ══
+      favorites:    u.favs  || 0,
+      lastSeen:     now.toISOString(),
+      timezone:     Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      locale:       navigator.language || '',
+      platform:     navigator.userAgent.includes('iPhone')||navigator.userAgent.includes('iPad') ? 'iOS'
+                    : navigator.userAgent.includes('Android') ? 'Android' : 'Web',
+
+      // ══ Timestamps ══
+      createdAt:    createdAt,
+      updatedAt:    window.__fsTs(),
     }, { merge: true });
+
   } catch(e){ console.warn('fsSaveUser error:', e.message); }
+}
+
+// Получить название уровня по количеству рефералов
+function _getLevelName(refs){
+  if(refs >= 25) return '🏆 Топ';
+  if(refs >= 10) return '⭐ Эксперт';
+  if(refs >= 3)  return '🤝 Партнёр';
+  return '👋 Приятель';
 }
 
 // Начислить реферал пригласившему
@@ -750,7 +799,24 @@ window.addEventListener('load',()=>{
   }catch(e){}
 
   const s = gS();
-  if(s){ CU=s; FAVS=gF(s.id); launch(); }
+  if(s){
+    CU=s; FAVS=gF(s.id);
+    // Обновляем данные в Firestore при каждом входе
+    waitFS(()=>{
+      // Если есть Telegram данные — мигрируем на TG ID
+      const tgU = window.__tgUser;
+      if(tgU && tgU.id && CU.id !== tgU.id){
+        const users = gU();
+        const newU = {...CU, id:tgU.id, name:tgU.name||CU.name, username:tgU.username||CU.username||''};
+        delete users[CU.id];
+        users[tgU.id] = newU;
+        sU(users); sS(newU); CU = newU;
+        FAVS = gF(tgU.id);
+      }
+      fsSaveUser(CU);
+    });
+    launch();
+  }
 });
 
 // ════ AUTH ══════════════════════════════════════════
