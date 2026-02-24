@@ -22,40 +22,31 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-  import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp }
-    from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-  // ★ ЗАМЕНИ НА СВОИ ДАННЫЕ ИЗ FIREBASE CONSOLE
-  const firebaseConfig = {
-    apiKey:            "YOUR_API_KEY",
-    authDomain:        "YOUR_PROJECT.firebaseapp.com",
-    databaseURL:       "https://YOUR_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId:         "YOUR_PROJECT",
-    storageBucket:     "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId:             "YOUR_APP_ID"
-  };
+// ЗАМЕНИ НА СВОИ ДАННЫЕ ИЗ КОНСОЛИ FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
+  authDomain: "navigation-a08ba.firebaseapp.com",
+  databaseURL: "https://navigation-a08ba-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "navigation-a08ba",
+  storageBucket: "navigation-a08ba.appspot.com",
+  messagingSenderId: "988049632333",
+  appId: "1:988049632333:web:c1049f11704842a3d68004"
+};
 
-  let DB = null;
-  try {
-    const app = initializeApp(firebaseConfig);
-    DB = getDatabase(app);
-    window.__DB = DB;
-    window.__dbRef = ref;
-    window.__dbSet = set;
-    window.__dbGet = get;
-    window.__dbOnValue = onValue;
-    window.__dbUpdate = update;
-    window.__dbPush = push;
-    window.__dbTs = serverTimestamp;
-    window.__firebaseReady = true;
-    console.log('Firebase OK');
-  } catch(e) {
-    console.warn('Firebase not configured:', e.message);
-    window.__firebaseReady = false;
-  }
+let db;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+  window.DB = db; // Чтобы база была доступна в других скриптах
+  console.log("Firebase подключен!");
+} catch (error) {
+  console.error("Ошибка подключения:", error);
+}
 </script>
+
 
 <style>
 /* ══ FORCE DARK — kills Telegram light theme ══ */
