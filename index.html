@@ -22,11 +22,11 @@
         (потом ужесточи для продакшна)
 ══════════════════════════════════════════════════════════ -->
 <script type="module">
-  // ВНИМАНИЕ: Ссылки должны быть ПОЛНЫМИ до самого конца .js
+  // 1. Импортируем модули Realtime Database (ссылки ПОЛНЫЕ, не сокращай их)
   import { initializeApp } from 'https://www.gstatic.com';
   import { getDatabase, ref, update, serverTimestamp } from 'https://www.gstatic.com';
-  import { getFirestore, doc, setDoc, serverTimestamp as fsTimestamp } from 'https://www.gstatic.com';
 
+  // 2. Твой актуальный конфиг для проекта navigation-a08ba
   const firebaseConfig = {
     apiKey: "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
     authDomain: "navigation-a08ba.firebaseapp.com",
@@ -39,47 +39,33 @@
   };
 
   try {
+    // 3. Инициализация
     const app = initializeApp(firebaseConfig);
     const DB = getDatabase(app);
-    const FS = getFirestore(app);
-
     const tg = window.Telegram.WebApp;
+    
     tg.ready();
     const user = tg.initDataUnsafe?.user;
 
+    // 4. Сохранение данных пользователя при входе
     if (user) {
-      // 1. Запись в Realtime Database
-      update(ref(DB, 'users/' + user.id), {
-        name: user.first_name,
-        last_visit: serverTimestamp()
-      });
-
-      // 2. Запись в Cloud Firestore
-      // Мы используем alert, чтобы ты точно увидел результат в Telegram!
-      const fsRef = doc(FS, "users", user.id.toString());
-      setDoc(fsRef, {
-        first_name: user.first_name,
+      const userRef = ref(DB, 'users/' + user.id);
+      update(userRef, {
+        first_name: user.first_name || "",
         username: user.username || "n/a",
-        registered: fsTimestamp()
-      }, { merge: true })
-      .then(() => {
-        console.log("Firestore OK");
-        // Если увидишь это в Telegram — значит коллекция СОЗДАНА!
-        tg.showAlert("✅ Данные успешно записаны в Firestore!");
-      })
-      .catch(e => {
-        tg.showAlert("❌ Ошибка записи: " + e.message);
+        last_visit: serverTimestamp()
+      }).then(() => {
+        console.log("✅ Данные пользователя обновлены в Realtime Database");
+      }).catch((error) => {
+        console.error("❌ Ошибка записи в базу:", error);
       });
-    } else {
-      // Если ты открыл не через Telegram, записи НЕ БУДЕТ
-      console.warn("User not found (not in Telegram)");
     }
 
+    // Делаем базу доступной глобально для других твоих скриптов
     window.__DB = DB;
-    window.__FS = FS;
 
   } catch(e) {
-    console.error("Setup Error:", e);
+    console.error("Критическая ошибка инициализации:", e);
   }
 </script>
 
