@@ -16,16 +16,19 @@
     from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
   import {
     getFirestore, doc, setDoc, getDoc, getDocs,
-    collection, onSnapshot, increment, updateDoc, serverTimestamp
+    collection, onSnapshot, increment, updateDoc,
+    deleteDoc, serverTimestamp, arrayUnion, addDoc
   } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey:            "AIzaSyBvPOFlJsnO5BNYLdRdA-Db4uvXT8QIwXQ",
     authDomain:        "navigation-a08ba.firebaseapp.com",
+    databaseURL:       "https://navigation-a08ba-default-rtdb.firebaseio.com",
     projectId:         "navigation-a08ba",
     storageBucket:     "navigation-a08ba.firebasestorage.app",
     messagingSenderId: "988049632333",
-    appId:             "1:988049632333:web:c1049f11704842a3d68004"
+    appId:             "1:988049632333:web:c1049f11704842a3d68004",
+    measurementId:     "G-TS21Y81VVF"
   };
 
   try {
@@ -42,6 +45,9 @@
     window.__fsOnSnapshot = onSnapshot;
     window.__fsIncrement  = increment;
     window.__fsUpdateDoc  = updateDoc;
+    window.__fsDeleteDoc  = deleteDoc;
+    window.__fsArrayUnion = arrayUnion;
+    window.__fsAddDoc     = addDoc;
     window.__fsTs         = serverTimestamp;
     window.__firebaseReady = true;
     console.log('✅ Firestore ready');
@@ -771,16 +777,17 @@ function buildCATS(){
 let CATS = buildCATS();
 
 // ════ ЗАГРУЗКА ПОСТОВ ИЗ FIRESTORE ═════════════════
+let _postsUnsub = null;
 function fsLoadPosts(){
-  if(!window.__firebaseReady){ renderHome(); return; }
+  if(!window.__firebaseReady){ return; }
+  if(_postsUnsub){ _postsUnsub(); _postsUnsub=null; }
   try{
     const colRef = window.__fsCollection(window.__FS, 'posts');
-    // Realtime подписка — обновляется сразу при добавлении поста в Firebase Console
-    window.__fsOnSnapshot(colRef, snap => {
-      if(snap.empty){ renderHome(); return; }
+    _postsUnsub = window.__fsOnSnapshot(colRef, snap => {
       const loaded = [];
       snap.forEach(d => {
         const p = d.data();
+        if(p.published === false) return; // скрытые пропускаем
         const meta = CAT_META[p.cat] || {ico:'i-coin', bg:'linear-gradient(135deg,#0a1855,#1e3a8a)'};
         loaded.push({
           id:      d.id,
@@ -791,24 +798,27 @@ function fsLoadPosts(){
           type:    p.type    || 'post',
           ico:     p.ico     || meta.ico,
           bg:      p.bg      || meta.bg,
-          order:   p.order   || 99,
+          order:   typeof p.order === 'number' ? p.order : 99,
           tgLink:  p.tgLink  || 'https://t.me/+c4ekMHlWBbQzYjUy',
           tgConsp: p.tgConsp || 'https://t.me/+c4ekMHlWBbQzYjUy',
-          published: p.published !== false, // по умолчанию опубликован
         });
       });
-      // Только опубликованные, сортируем по order
-      POSTS = loaded.filter(p=>p.published).sort((a,b)=>a.order-b.order);
-      CATS  = buildCATS();
-      // Перерисовываем если главная активна
-      if(document.getElementById('page-home').classList.contains('active')){
+      // ★ ВАЖНО: только если есть видимые посты — заменяем дефолтные
+      // Иначе оставляем POSTS_DEFAULT чтобы главная не была пустой
+      if(loaded.length > 0){
+        POSTS = loaded.sort((a,b) => a.order - b.order);
+      } else {
+        POSTS = [...POSTS_DEFAULT]; // восстанавливаем дефолтные
+      }
+      CATS = buildCATS();
+      if(document.getElementById('page-home')?.classList.contains('active')){
         renderHome();
       }
     }, err=>{
       console.warn('fsLoadPosts error:', err.message);
-      renderHome(); // показываем дефолтные
+      // При ошибке дефолтные уже стоят — ничего не делаем
     });
-  }catch(e){ renderHome(); }
+  }catch(e){ console.warn('fsLoadPosts exception:', e); }
 }
 const AVCOLORS=['#0a1855','#1a0840','#0a3020','#301000','#002030','#1a0820','#0f1f60','#2a0a40'];
 const LEVELS=[
@@ -909,28 +919,58 @@ function _getLevelName(refs){
   return '👋 Приятель';
 }
 
-// Начислить реферал пригласившему
-async function fsAddRef(inviterId){
+// Начислить реферал пригласившему (с защитой от дублей)
+async function fsAddRef(rawInviterId, newUserId){
   if(!window.__firebaseReady) return;
+
+  // Нормализуем — убираем префикс tg и ref_
+  const cleanId = String(rawInviterId).replace('ref_','').replace('tg','');
+  console.log('🎯 fsAddRef: ищем пользователя с ID:', cleanId);
+
+  // Ищем документ — пробуем без префикса, с tg- и с числовым
+  let docRef = null;
+  for(const tryId of [cleanId, 'tg'+cleanId]){
+    try{
+      const s = await window.__fsGetDoc(window.__fsDoc(window.__FS,'users',tryId));
+      if(s.exists()){ docRef = window.__fsDoc(window.__FS,'users',tryId); console.log('✅ Нашли:', tryId); break; }
+    }catch(e){}
+  }
+
+  if(!docRef){
+    console.warn('⚠️ fsAddRef: пользователь не найден, id=', cleanId);
+    // Создаём placeholder чтобы реферал не потерялся
+    return;
+  }
+
   try{
-    const ref = window.__fsDoc(window.__FS, 'users', String(inviterId));
-    await window.__fsUpdateDoc(ref, {
-      refs: window.__fsIncrement(1),
-      pts:  window.__fsIncrement(100)
-    });
-    // Обновляем локально если это текущий пользователь
-    const users = gU();
-    if(users[inviterId]){
-      users[inviterId].refs = (users[inviterId].refs||0) + 1;
-      users[inviterId].pts  = (users[inviterId].pts||0)  + 100;
-      sU(users);
-      if(CU && CU.id === inviterId){
-        CU.refs = users[inviterId].refs;
-        CU.pts  = users[inviterId].pts;
-        sS(CU);
-      }
+    const snap = await window.__fsGetDoc(docRef);
+    const data = snap.data() || {};
+    const newUserStr = String(newUserId).replace('tg','');
+    const alreadyReffed = (data.refedUsers || []).some(u => String(u).replace('tg','') === newUserStr);
+
+    if(alreadyReffed){
+      console.log('ℹ️ fsAddRef: реферал уже засчитан ранее');
+      return;
     }
-  } catch(e){ console.warn('fsAddRef error:', e.message); }
+
+    await window.__fsUpdateDoc(docRef, {
+      refs:       window.__fsIncrement(1),
+      pts:        window.__fsIncrement(100),
+      refedUsers: window.__fsArrayUnion(newUserStr),
+    });
+
+    // Обновляем localStorage если пригласивший — текущий пользователь
+    if(CU && (String(CU.id).replace('tg','') === cleanId)){
+      CU.refs = (CU.refs||0) + 1;
+      CU.pts  = (CU.pts||0) + 100;
+      sS(CU);
+      const users = gU();
+      if(users[CU.id]){ users[CU.id].refs = CU.refs; users[CU.id].pts = CU.pts; sU(users); }
+      updateUI();
+    }
+    console.log('✅ Реферал засчитан! Пригласивший:', cleanId, '← новый:', newUserStr);
+    showT('🎉 +1 реферал засчитан!');
+  }catch(e){ console.warn('fsAddRef error:', e.message); }
 }
 
 // Подписка на рейтинг (live обновления)
@@ -965,13 +1005,33 @@ function fsListenLeaderboard(){
   } catch(e){ renderLBFallback(); }
 }
 
-// Загрузка рейтинга — сначала показываем fallback, потом live
-function loadLeaderboard(){
-  renderLBFallback();
-  waitFS(() => {
-    fsSaveUser(CU); // сохраняем себя
-    fsListenLeaderboard();
-  });
+// Синхронизируем счётчики с Firestore при каждом входе
+async function syncUserFromFirestore(){
+  if(!window.__firebaseReady || !CU) return;
+  try{
+    const rawId = String(CU.id).replace('tg','');
+    let snap = null;
+    for(const tryId of [CU.id, 'tg'+rawId, rawId]){
+      try{
+        const s = await window.__fsGetDoc(window.__fsDoc(window.__FS, 'users', tryId));
+        if(s.exists()){ snap = s; break; }
+      }catch(e){}
+    }
+    if(!snap) return;
+    const data = snap.data();
+    CU.refs = data.refs ?? CU.refs ?? 0;
+    CU.pts  = data.pts  ?? CU.pts  ?? 0;
+    sS(CU);
+    const users = gU();
+    if(users[CU.id]){
+      users[CU.id].refs = CU.refs;
+      users[CU.id].pts  = CU.pts;
+      sU(users);
+    }
+    document.getElementById('arefs').textContent = CU.refs;
+    document.getElementById('apts').textContent  = CU.pts;
+    renderLevels();
+  }catch(e){ console.warn('syncUserFromFirestore error:', e.message); }
 }
 
 // ════ BOOT ═════════════════════════════════════════
@@ -981,9 +1041,8 @@ window.addEventListener('load',()=>{
     if(tg){
       const tgUser = tg?.initDataUnsafe?.user;
       if(tgUser){
-        // ★ ID = чистый числовой Telegram ID (именно он идёт в реферальную ссылку)
         window.__tgUser = {
-          id:       String(tgUser.id),   // "123456789" — настоящий TG ID
+          id:       String(tgUser.id),
           name:     [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ')
                     || tgUser.username || 'Инвестор',
           username: tgUser.username || '',
@@ -991,14 +1050,19 @@ window.addEventListener('load',()=>{
         const rnEl = document.getElementById('rn');
         if(rnEl && !rnEl.value) rnEl.value = window.__tgUser.name;
       }
-      // ★ Читаем реферальный параметр — он содержит TG ID пригласившего
+      // ★ Реферальный параметр — читаем start_param (работает и для ?start= и для ?startapp=)
       const startParam = tg?.initDataUnsafe?.start_param || '';
-      if(startParam.startsWith('ref_')){
-        const refId = startParam.replace('ref_','');
-        if(refId) sessionStorage.setItem('ref_from', refId);
+      console.log('📦 start_param:', startParam);
+      // Поддерживаем форматы: ref_123, ref_tg123
+      if(startParam && (startParam.startsWith('ref_') || startParam.includes('ref'))){
+        const refId = startParam.replace('ref_','').replace('tg','');
+        if(refId && refId.length > 3){
+          localStorage.setItem('ref_from', refId);
+          console.log('📎 Реферал сохранён от:', refId);
+        }
       }
     }
-  }catch(e){}
+  }catch(e){ console.warn('boot error:', e); }
 
   const s = gS();
   if(s){
@@ -1023,12 +1087,16 @@ window.addEventListener('load',()=>{
 
 // ════ AUTH ══════════════════════════════════════════
 function sw(m){
-  const il=m==='l';
-  document.getElementById('bl').classList.toggle('on',il);
-  document.getElementById('br').classList.toggle('on',!il);
-  document.getElementById('fl').style.display=il?'':'none';
-  document.getElementById('fr').style.display=il?'none':'';
-  ['la','ra'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  const il = m === 'l';
+  document.getElementById('bl').classList.toggle('on', il);
+  document.getElementById('br').classList.toggle('on', !il);
+  // Явно задаём display чтобы работало в Telegram WebApp
+  document.getElementById('fl').style.display = il ? 'block' : 'none';
+  document.getElementById('fr').style.display = il ? 'none'  : 'block';
+  ['la','ra'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.textContent = ''; el.classList.remove('show'); }
+  });
 }
 function tp(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.style.opacity=i.type==='text'?.7:.32;}
 function sh(hid,fid,msg,t){
@@ -1058,34 +1126,52 @@ function vP(){
 function vP2(){const v=document.getElementById('rp').value,v2=document.getElementById('rp2').value;if(!v2){sh('hp2','rp2','Обязательное поле','er');return false;}if(v!==v2){sh('hp2','rp2','Пароли не совпадают','er');return false;}sh('hp2','rp2','Пароли совпадают','ok');return true;}
 function showA(id,msg){const e=document.getElementById(id);e.textContent=msg;e.classList.add('show');}
 
-function doLogin(){
-  const em=document.getElementById('le').value.trim().toLowerCase(),pw=document.getElementById('lp').value;
-  document.getElementById('la').classList.remove('show');
-  if(!em||!pw){showA('la','Заполните все поля');return;}
-  const u=Object.values(gU()).find(u=>u.email===em);
-  if(!u||u.ph!==hash(pw)){showA('la','Неверный email или пароль');return;}
+async function doLogin(){
+  const em = document.getElementById('le').value.trim().toLowerCase();
+  const pw = document.getElementById('lp').value;
+  const errEl = document.getElementById('la');
+  errEl.textContent = '';
+  errEl.classList.remove('show');
 
-  // Проверяем блокировку
-  waitFS(async ()=>{
-    const blocked = await checkBlocked(u.id);
-    if(blocked){
-      showA('la','❌ Ваш аккаунт заблокирован. Обратитесь к администратору.');
-      return;
-    }
-    // Если есть TG данные — мигрируем на TG ID
-    const tgU = window.__tgUser;
-    if(tgU && tgU.id && u.id !== tgU.id && String(u.id).startsWith('u')){
-      const users = gU();
-      const newU = {...u, id: tgU.id, name: tgU.name||u.name, username: tgU.username||''};
-      delete users[u.id]; users[tgU.id] = newU;
-      sU(users); sS(newU); CU = newU; FAVS = gF(tgU.id);
-      fsSaveUser(newU);
-    } else {
-      CU=u; FAVS=gF(u.id); sS(u);
-      fsSaveUser(u);
-    }
-    launch();
-  });
+  if(!em || !pw){ showA('la','Заполните все поля'); return; }
+
+  const u = Object.values(gU()).find(u => u.email === em);
+  if(!u || u.ph !== hash(pw)){ showA('la','Неверный email или пароль'); return; }
+
+  // Показываем загрузку
+  const btn = document.querySelector('#fl .abtn');
+  if(btn){ btn.textContent = 'Входим...'; btn.disabled = true; }
+
+  // Применяем TG миграцию если нужно
+  const tgU = window.__tgUser;
+  let finalU = u;
+  if(tgU && tgU.id && u.id !== tgU.id){
+    const users = gU();
+    finalU = {...u, id: tgU.id, name: tgU.name || u.name, username: tgU.username || ''};
+    delete users[u.id];
+    users[tgU.id] = finalU;
+    sU(users); sS(finalU);
+  }
+  CU = finalU; FAVS = gF(finalU.id); sS(finalU);
+
+  // Проверка блокировки — не блокирует вход, только фоновая
+  if(window.__firebaseReady){
+    try{
+      const snap = await window.__fsGetDoc(window.__fsDoc(window.__FS,'users',String(finalU.id)));
+      if(snap.exists() && snap.data().blocked === true){
+        CU = null; FAVS = new Set();
+        if(btn){ btn.textContent = 'ВОЙТИ В АККАУНТ'; btn.disabled = false; }
+        showA('la','❌ Аккаунт заблокирован. Обратитесь к администратору.');
+        return;
+      }
+    }catch(e){}
+  }
+
+  if(btn){ btn.textContent = 'ВОЙТИ В АККАУНТ'; btn.disabled = false; }
+
+  // Сохраняем в Firestore фоново
+  waitFS(()=>{ fsSaveUser(finalU); });
+  launch();
 }
 function doReg(){
   const a=vPh(),b=vE(),c=vP(),d=vP2();
@@ -1120,14 +1206,15 @@ function doReg(){
   users[id] = u; sU(users);
   CU = u; FAVS = gF(id); sS(u);
 
-  // Сохраняем в Firestore — документ с ID = Telegram ID
+  // Сохраняем в Firestore
   waitFS(()=>{ fsSaveUser(u); });
 
-  // Начисляем реферал пригласившему
-  const refFrom = sessionStorage.getItem('ref_from');
-  if(refFrom && refFrom !== id){
-    waitFS(()=>{ fsAddRef(refFrom); });
-    sessionStorage.removeItem('ref_from');
+  // ★ Начисляем реферал пригласившему
+  const refFrom = localStorage.getItem('ref_from');
+  if(refFrom && refFrom !== id && refFrom !== String(id).replace('tg','')){
+    console.log('🎯 Начисляем реферал для:', refFrom, '← новый пользователь:', id);
+    waitFS(()=>{ fsAddRef(refFrom, id); });
+    localStorage.removeItem('ref_from');
   }
 
   launch();
@@ -1152,8 +1239,11 @@ function launch(){
   renderCollections();
   renderLevels();
   loadLeaderboard();
-  checkAdminFab(); // показываем кнопку если админ
-  waitFS(()=>{ fsLoadPosts(); });
+  checkAdminFab();
+  waitFS(()=>{
+    fsLoadPosts();
+    syncUserFromFirestore(); // ← подтягиваем актуальные рефералы/баллы
+  });
 }
 
 // ════ UI UPDATE ════════════════════════════════════
@@ -1490,13 +1580,14 @@ function doCopy(text, onDone){
 }
 
 function cpRef(){
-  const refId = CU?.tgNumericId || CU?.id || '';
-  const rl = 'https://t.me/navigationinvestat_bot?startapp=ref_' + refId;
+  const refId = CU?.tgNumericId || String(CU?.id||'').replace('tg','');
+  // Правильный формат для Telegram Mini App через inline кнопку бота
+  const rl = 'https://t.me/navigationinvestat_bot?start=ref_' + refId;
   doCopy(rl, ok => animateCopyBtn('reflbtn','reflico','refltxt','reflsvg', ok));
 }
 function cpHR(){
-  const refId = CU?.tgNumericId || CU?.id || '';
-  const rl = 'https://t.me/navigationinvestat_bot?startapp=ref_' + refId;
+  const refId = CU?.tgNumericId || String(CU?.id||'').replace('tg','');
+  const rl = 'https://t.me/navigationinvestat_bot?start=ref_' + refId;
   doCopy(rl, ok => animateCopyBtn('hcpbtn','hcpbtn','hcptxt','hcpico', ok));
 }
 function showT(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
@@ -1505,12 +1596,15 @@ function showT(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 // ADMIN PANEL
 // Твой Telegram ID: 5996401983
 // ════════════════════════════════════════════════════
-const ADMIN_IDS = ['tg5996401983', '5996401983'];
+const ADMIN_IDS = [
+  'tg5996401983', '5996401983',   // ты
+  'tg240326047',  '240326047'     // папа
+];
 
 function isAdmin(){
   if(!CU) return false;
   const rawId = String(CU.id).replace('tg','');
-  return ADMIN_IDS.includes(CU.id) || ADMIN_IDS.includes(rawId) || rawId === '5996401983';
+  return ADMIN_IDS.some(a => a === CU.id || a === rawId);
 }
 
 function checkAdminFab(){
@@ -1557,32 +1651,36 @@ function admAddPost(){
 
   const meta = CAT_META[cat] || {ico:'i-coin', bg:'linear-gradient(135deg,#0a1855,#1e3a8a)'};
   const btn  = document.querySelector('#adm-posts .adm-btn');
-  btn.textContent = 'Публикую...';
+  const resetBtn = () => {
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Опубликовать пост';
+    btn.disabled = false;
+    btn.style.opacity = '';
+  };
+  btn.textContent = '⏳ Публикую...';
   btn.disabled = true;
+  btn.style.opacity = '0.7';
 
-  const colRef = window.__fsCollection(window.__FS, 'posts');
-  window.__fsSetDoc(window.__fsDoc(colRef), {
+  // ★ ИСПРАВЛЕНО: используем addDoc — он сам создаёт уникальный ID
+  window.__fsAddDoc(window.__fsCollection(window.__FS, 'posts'), {
     title, content, cat, type, tags,
     ico: meta.ico, bg: meta.bg,
     tgLink: link, tgConsp: link,
     order, published: true,
     createdAt: window.__fsTs(),
-    createdBy: CU.id
-  }, {merge:false})
+    createdBy: CU?.id || 'admin'
+  })
   .then(()=>{
     showT('✅ Пост опубликован!');
-    // Очищаем форму
     ['ap-title','ap-content','ap-tags','ap-order'].forEach(id=>{
-      document.getElementById(id).value='';
+      const el = document.getElementById(id);
+      if(el) el.value = '';
     });
-    btn.textContent = 'Опубликовать пост';
-    btn.disabled = false;
+    resetBtn();
     admLoadPosts();
   })
   .catch(e=>{
     showT('❌ Ошибка: ' + e.message);
-    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Опубликовать пост';
-    btn.disabled = false;
+    resetBtn();
   });
 }
 
@@ -1591,34 +1689,62 @@ function admLoadPosts(){
   const el = document.getElementById('adm-posts-list');
   el.innerHTML = '<div style="color:#7777aa;font-size:13px;padding:8px 0">Загрузка...</div>';
   window.__fsGetDocs(window.__fsCollection(window.__FS,'posts')).then(snap=>{
-    if(snap.empty){ el.innerHTML='<div style="color:#7777aa;font-size:13px;padding:8px 0">Постов пока нет</div>'; return; }
+    if(snap.empty){ el.innerHTML='<div style="color:#7777aa;font-size:13px;padding:8px 0">Постов пока нет — создай первый выше</div>'; return; }
     const posts = [];
     snap.forEach(d=>posts.push({docId:d.id, ...d.data()}));
     posts.sort((a,b)=>(a.order||99)-(b.order||99));
-    el.innerHTML = posts.map(p=>`
-      <div class="adm-post-item">
+    el.innerHTML = posts.map(p=>{
+      const hidden = p.published === false;
+      return `<div class="adm-post-item" style="${hidden?'opacity:.5':''}">
         <div style="width:36px;height:36px;border-radius:8px;flex-shrink:0;background:${p.bg||'#111'};display:flex;align-items:center;justify-content:center">
           <svg width="20" height="20" viewBox="0 0 60 60"><use href="#${p.ico||'i-coin'}" color="white"/></svg>
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:#eeeeff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title||'—'}</div>
-          <div style="font-size:11px;color:#7777aa;margin-top:2px">${p.cat||''} · #${p.order||'—'}</div>
+          <div style="font-size:13px;font-weight:600;color:#eeeeff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${hidden?'<span style="font-size:10px;background:rgba(224,48,80,.2);color:#ff8099;padding:1px 5px;border-radius:4px;margin-right:5px">скрыт</span>':''}${p.title||'—'}
+          </div>
+          <div style="font-size:11px;color:#7777aa;margin-top:2px">${p.cat||''} · порядок: ${p.order||'—'}</div>
         </div>
-        <button class="adm-post-del" onclick="admDeletePost('${p.docId}')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/></svg>
-        </button>
-      </div>`).join('');
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${hidden
+            ? `<button onclick="admRestorePost('${p.docId}')" style="width:30px;height:30px;border-radius:8px;background:rgba(11,170,110,.15);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#34d399;font-size:14px">👁</button>`
+            : `<button onclick="admDeletePost('${p.docId}')" style="width:30px;height:30px;border-radius:8px;background:rgba(224,48,80,.1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e03050">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/></svg>
+              </button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
   }).catch(e=>{ el.innerHTML=`<div style="color:#e03050;font-size:13px">${e.message}</div>`; });
 }
 
+function admRestorePost(docId){
+  window.__fsUpdateDoc(window.__fsDoc(window.__FS,'posts',docId),{published:true})
+    .then(()=>{ showT('✅ Пост восстановлен'); admLoadPosts(); })
+    .catch(e=>showT('Ошибка: '+e.message));
+}
+
 function admDeletePost(docId){
-  if(!confirm('Удалить пост?')) return;
-  // fsDeleteDoc через getDocs + setDoc с published:false (delete не импортирован)
-  const ref = window.__fsDoc(window.__FS, 'posts', docId);
-  window.__fsUpdateDoc(ref, {published: false}).then(()=>{
-    showT('🗑 Пост скрыт');
-    admLoadPosts();
-  }).catch(e=>showT('Ошибка: '+e.message));
+  // confirm() не работает в Telegram Mini App — делаем свой диалог
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+  overlay.innerHTML=`<div style="background:#1a1a2e;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;border:1px solid rgba(255,255,255,.1)">
+    <div style="font-size:32px;margin-bottom:12px">🗑</div>
+    <div style="font-size:15px;font-weight:700;color:#eeeeff;margin-bottom:8px">Удалить пост?</div>
+    <div style="font-size:12px;color:#7777aa;margin-bottom:20px">Пост будет удалён безвозвратно</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="this.closest('.del-overlay').remove()" style="flex:1;padding:12px;background:#111122;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#aaa;font-size:13px;font-weight:600;cursor:pointer;font-family:Manrope">Отмена</button>
+      <button id="del-ok-${docId}" style="flex:1;padding:12px;background:linear-gradient(135deg,#e03050,#c02040);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Manrope">Удалить</button>
+    </div>
+  </div>`;
+  overlay.classList.add('del-overlay');
+  document.body.appendChild(overlay);
+  document.getElementById('del-ok-'+docId).onclick = () => {
+    overlay.remove();
+    window.__fsDeleteDoc(window.__fsDoc(window.__FS,'posts',docId))
+      .then(()=>{ showT('🗑 Пост удалён'); admLoadPosts(); })
+      .catch(e=>showT('Ошибка: '+e.message));
+  };
 }
 
 // ── USERS ADMIN ────────────────────────────────────
@@ -1633,7 +1759,9 @@ function admLoadUsers(){
     users.sort((a,b)=>(b.refs||0)-(a.refs||0));
     el.innerHTML = users.map(u=>{
       const blocked = u.blocked || false;
-      const isMe = String(u.docId).replace('tg','') === '5996401983', '240326047';
+    const tgNumericId = String(u.docId).replace('tg','');
+      const isAdminUser = ADMIN_IDS.some(id=>id===u.docId||id===tgNumericId);
+      const isMe = tgNumericId === '5996401983', '240326047';
       return `<div class="adm-user-item">
         <div class="adm-user-row">
           <div class="adm-user-av" style="background:${u.col||'#3d5af1'}">${(u.name||'?')[0].toUpperCase()}</div>
@@ -1641,25 +1769,41 @@ function admLoadUsers(){
             <div class="adm-user-name">
               ${u.name||'—'}
               ${isMe?'<span style="font-size:10px;background:rgba(61,90,241,.2);color:#818cf8;padding:2px 6px;border-radius:5px;margin-left:4px">ВЫ</span>':''}
+              ${isAdminUser&&!isMe?'<span style="font-size:10px;background:rgba(99,102,241,.2);color:#a5b4fc;padding:2px 6px;border-radius:5px;margin-left:4px">ADMIN</span>':''}
               ${blocked?'<span class="blocked-badge">ЗАБЛОКИРОВАН</span>':''}
             </div>
-            <div class="adm-user-meta">
-              ${u.username?'@'+u.username+' · ':''}${u.email||''} · ID: ${u.docId}
-            </div>
+            <div class="adm-user-meta">${u.username?'@'+u.username+' · ':''} ${u.email||''}</div>
           </div>
-          ${isMe?'':
+          ${!isMe?
             `<button class="adm-block-btn ${blocked?'unblock':'block'}" onclick="admToggleBlock('${u.docId}',${blocked})">
-              ${blocked?'✅ Разблокировать':'🚫 Заблокировать'}
+              ${blocked?'✅ Разблок':'🚫 Блок'}
             </button>`
-          }
+          :''}
         </div>
         <div class="adm-user-stats">
-          <span class="adm-stat">Рефералы: <b>${u.refs||0}</b></span>
-          <span class="adm-stat">Баллы: <b>${u.pts||0}</b></span>
-          <span class="adm-stat">Уровень: <b>${u.level||'👋 Приятель'}</b></span>
-          <span class="adm-stat">Платформа: <b>${u.platform||'—'}</b></span>
+          <span class="adm-stat">👥 Рефералы: <b>${u.refs||0}</b></span>
+          <span class="adm-stat">⭐ Баллы: <b>${u.pts||0}</b></span>
+          <span class="adm-stat">📱 ${u.platform||'—'}</span>
         </div>
-        <div style="font-size:10px;color:#555;margin-top:6px">${u.phone||''} ${u.lastSeen?'· Был: '+new Date(u.lastSeen).toLocaleDateString('ru'):''}</div>
+        <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <div>
+              <div style="font-size:10px;color:#7777aa;margin-bottom:2px">Telegram ID</div>
+              <div style="font-size:13px;font-weight:700;color:#818cf8;font-family:monospace">${tgNumericId}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:#7777aa;margin-bottom:2px">ID в базе</div>
+              <div style="font-size:11px;font-weight:600;color:#aaaacc;font-family:monospace">${u.docId}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:#7777aa;margin-bottom:2px">Телефон</div>
+              <div style="font-size:12px;color:#eeeeff">${u.phone||'—'}</div>
+            </div>
+            <a href="https://t.me/${u.username?u.username:'id'+tgNumericId}" target="_blank" style="padding:6px 10px;background:rgba(61,90,241,.2);border-radius:8px;color:#818cf8;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap">✉️ Написать</a>
+          </div>
+          ${!isMe?`<button onclick="admAddRefManual('${u.docId}','${(u.name||'').replace(/'/g,"")}')" style="width:100%;padding:7px;background:rgba(61,90,241,.15);border:1px solid rgba(61,90,241,.3);border-radius:8px;color:#818cf8;font-size:11px;font-weight:600;cursor:pointer;font-family:Manrope">+ Зачислить реферал вручную</button>`:''}
+        </div>
+        <div style="font-size:10px;color:#555;margin-top:4px">${u.lastSeen?'Вход: '+new Date(u.lastSeen).toLocaleString('ru'):''}</div>
       </div>`;
     }).join('');
   }).catch(e=>{ el.innerHTML=`<div style="color:#e03050;font-size:13px">${e.message}</div>`; });
@@ -1668,9 +1812,34 @@ function admLoadUsers(){
 function admToggleBlock(docId, currentlyBlocked){
   const ref = window.__fsDoc(window.__FS, 'users', docId);
   window.__fsUpdateDoc(ref, {blocked: !currentlyBlocked}).then(()=>{
-    showT(currentlyBlocked ? '✅ Пользователь разблокирован' : '🚫 Пользователь заблокирован');
+    showT(currentlyBlocked ? '✅ Разблокирован' : '🚫 Заблокирован');
     admLoadUsers();
   }).catch(e=>showT('Ошибка: '+e.message));
+}
+
+// ★ Ручное зачисление реферала (для уже зарегистрированных друзей)
+function admAddRefManual(toDocId, toName){
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+  overlay.innerHTML=`<div style="background:#1a1a2e;border-radius:16px;padding:24px;max-width:320px;width:100%;border:1px solid rgba(255,255,255,.1)">
+    <div style="font-size:14px;font-weight:700;color:#eeeeff;margin-bottom:4px">Зачислить реферал</div>
+    <div style="font-size:12px;color:#7777aa;margin-bottom:16px">Кому начислить: <b style="color:#818cf8">${toName}</b></div>
+    <div style="font-size:12px;color:#7777aa;margin-bottom:6px">Telegram ID пригласившего:</div>
+    <input id="ref-manual-id" placeholder="5996401983" style="width:100%;background:#111122;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 12px;color:#eeeeff;font-size:13px;font-family:Manrope;outline:none;box-sizing:border-box;margin-bottom:16px">
+    <div style="display:flex;gap:10px">
+      <button onclick="this.closest('.ref-overlay').remove()" style="flex:1;padding:11px;background:#111122;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#aaa;font-size:13px;cursor:pointer;font-family:Manrope">Отмена</button>
+      <button id="ref-manual-ok" style="flex:1;padding:11px;background:linear-gradient(135deg,#3d5af1,#6366f1);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Manrope">Зачислить</button>
+    </div>
+  </div>`;
+  overlay.classList.add('ref-overlay');
+  document.body.appendChild(overlay);
+  document.getElementById('ref-manual-ok').onclick = () => {
+    const invId = document.getElementById('ref-manual-id').value.trim();
+    if(!invId){ showT('⚠️ Введи ID'); return; }
+    overlay.remove();
+    fsAddRef(invId, toDocId);
+    showT('🎯 Реферал зачисляется...');
+  };
 }
 
 // Проверка блокировки при логине
