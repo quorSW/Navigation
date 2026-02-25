@@ -1633,7 +1633,7 @@ function admLoadUsers(){
     users.sort((a,b)=>(b.refs||0)-(a.refs||0));
     el.innerHTML = users.map(u=>{
       const blocked = u.blocked || false;
-      const isMe = String(u.docId).replace('tg','') === '5996401983';
+      const isMe = String(u.docId).replace('tg','') === '5996401983', '240326047';
       return `<div class="adm-user-item">
         <div class="adm-user-row">
           <div class="adm-user-av" style="background:${u.col||'#3d5af1'}">${(u.name||'?')[0].toUpperCase()}</div>
