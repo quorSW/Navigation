@@ -1126,93 +1126,95 @@ function vP(){
 function vP2(){const v=document.getElementById('rp').value,v2=document.getElementById('rp2').value;if(!v2){sh('hp2','rp2','Обязательное поле','er');return false;}if(v!==v2){sh('hp2','rp2','Пароли не совпадают','er');return false;}sh('hp2','rp2','Пароли совпадают','ok');return true;}
 function showA(id,msg){const e=document.getElementById(id);e.textContent=msg;e.classList.add('show');}
 
-async function doLogin(){
+function doLogin(){
   const em = document.getElementById('le').value.trim().toLowerCase();
   const pw = document.getElementById('lp').value;
+
+  // Сбрасываем ошибку
   const errEl = document.getElementById('la');
   errEl.textContent = '';
   errEl.classList.remove('show');
 
-  if(!em || !pw){ showA('la','Заполните все поля'); return; }
-
-  const u = Object.values(gU()).find(u => u.email === em);
-  if(!u || u.ph !== hash(pw)){ showA('la','Неверный email или пароль'); return; }
-
-  // Показываем загрузку
+  // Визуальный фидбек — сразу при нажатии
   const btn = document.querySelector('#fl .abtn');
-  if(btn){ btn.textContent = 'Входим...'; btn.disabled = true; }
+  if(btn){ btn.textContent = 'Проверяем...'; btn.disabled = true; }
 
-  // Применяем TG миграцию если нужно
+  const resetBtn = () => { if(btn){ btn.textContent = 'ВОЙТИ В АККАУНТ'; btn.disabled = false; } };
+
+  if(!em || !pw){ showA('la','Заполните все поля'); resetBtn(); return; }
+
+  // Ищем пользователя в localStorage
+  const allUsers = gU();
+  const u = Object.values(allUsers).find(x => x.email === em);
+  if(!u){ showA('la','Email не найден. Сначала зарегистрируйтесь.'); resetBtn(); return; }
+  if(u.ph !== hash(pw)){ showA('la','Неверный пароль'); resetBtn(); return; }
+
+  // Применяем Telegram ID если есть
   const tgU = window.__tgUser;
   let finalU = u;
-  if(tgU && tgU.id && u.id !== tgU.id){
-    const users = gU();
-    finalU = {...u, id: tgU.id, name: tgU.name || u.name, username: tgU.username || ''};
-    delete users[u.id];
-    users[tgU.id] = finalU;
-    sU(users); sS(finalU);
-  }
-  CU = finalU; FAVS = gF(finalU.id); sS(finalU);
-
-  // Проверка блокировки — не блокирует вход, только фоновая
-  if(window.__firebaseReady){
-    try{
-      const snap = await window.__fsGetDoc(window.__fsDoc(window.__FS,'users',String(finalU.id)));
-      if(snap.exists() && snap.data().blocked === true){
-        CU = null; FAVS = new Set();
-        if(btn){ btn.textContent = 'ВОЙТИ В АККАУНТ'; btn.disabled = false; }
-        showA('la','❌ Аккаунт заблокирован. Обратитесь к администратору.');
-        return;
-      }
-    }catch(e){}
+  if(tgU && tgU.id && String(u.id) !== String(tgU.id)){
+    finalU = {...u, id: tgU.id, name: tgU.name || u.name, username: tgU.username || u.username || ''};
+    delete allUsers[u.id];
+    allUsers[tgU.id] = finalU;
+    sU(allUsers);
   }
 
-  if(btn){ btn.textContent = 'ВОЙТИ В АККАУНТ'; btn.disabled = false; }
+  CU = finalU;
+  FAVS = gF(finalU.id);
+  sS(finalU);
 
-  // Сохраняем в Firestore фоново
+  resetBtn();
+
+  // Сохраняем в Firestore фоново (не блокирует вход)
   waitFS(()=>{ fsSaveUser(finalU); });
+
   launch();
 }
 function doReg(){
-  const a=vPh(),b=vE(),c=vP(),d=vP2();
-  document.getElementById('ra').classList.remove('show');
-  if(!a||!b||!c||!d){showA('ra','Исправьте ошибки выше');return;}
+  // Валидация
+  const a=vPh(), b=vE(), c=vP(), d=vP2();
+  const errEl = document.getElementById('ra');
+  errEl.textContent = '';
+  errEl.classList.remove('show');
+  if(!a||!b||!c||!d){ showA('ra','Исправьте ошибки выше'); return; }
 
   const tgU  = window.__tgUser;
-  const nm   = document.getElementById('rn').value.trim() || tgU?.name || 'Инвестор';
+  const nm   = document.getElementById('rn').value.trim() || (tgU && tgU.name) || 'Инвестор';
   const ph   = document.getElementById('rph').value.replace(/\D/g,'');
   const em   = document.getElementById('rem').value.trim().toLowerCase();
   const pw   = document.getElementById('rp').value;
-  const users = gU();
+  const allUsers = gU();
 
-  // ★ ID = числовой Telegram ID (как приходит в start_param)
-  const tgRawId = tgU ? String(tgU.id).replace('tg','') : null;
-  const id  = tgU?.id || String(Date.now());
+  // ID = Telegram ID если есть, иначе timestamp
+  const id  = (tgU && tgU.id) ? String(tgU.id) : String(Date.now());
   const col = AVCOLORS[Math.floor(Math.random()*AVCOLORS.length)];
+  const existing = allUsers[id] || {};
 
-  const existing = users[id];
   const u = {
     id,
-    tgNumericId: tgRawId || id, // числовой ID — именно он приходит в start_param
+    tgNumericId: String(id).replace('tg',''),
     name:     nm,
-    username: tgU?.username || '',
+    username: (tgU && tgU.username) || '',
     phone:    ph,
     email:    em,
     ph:       hash(pw),
-    refs:     existing?.refs || 0,
-    pts:      existing?.pts  || 0,
-    col:      existing?.col  || col
+    refs:     existing.refs || 0,
+    pts:      existing.pts  || 0,
+    col:      existing.col  || col
   };
-  users[id] = u; sU(users);
-  CU = u; FAVS = gF(id); sS(u);
 
-  // Сохраняем в Firestore
+  allUsers[id] = u;
+  sU(allUsers);
+  CU = u;
+  FAVS = gF(id);
+  sS(u);
+
+  // Firestore — фоново, не блокирует
   waitFS(()=>{ fsSaveUser(u); });
 
-  // ★ Начисляем реферал пригласившему
+  // Реферал
   const refFrom = localStorage.getItem('ref_from');
-  if(refFrom && refFrom !== id && refFrom !== String(id).replace('tg','')){
-    console.log('🎯 Начисляем реферал для:', refFrom, '← новый пользователь:', id);
+  if(refFrom && refFrom !== String(id).replace('tg','')){
     waitFS(()=>{ fsAddRef(refFrom, id); });
     localStorage.removeItem('ref_from');
   }
