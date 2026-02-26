@@ -343,8 +343,6 @@ html,body{
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ═══════════ ADMIN ═══════════ */
-#admin-fab{display:none;position:fixed;bottom:calc(var(--tab)+16px);right:16px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;cursor:pointer;z-index:51;box-shadow:0 4px 20px var(--glow);color:#fff;align-items:center;justify-content:center}
-#admin-fab.visible{display:flex!important;align-items:center;justify-content:center}
 #admin-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .adm-head{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brd);position:sticky;top:0;background:var(--bg);z-index:10}
 .adm-back{width:36px;height:36px;border-radius:10px;background:var(--bg3);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2)}
@@ -507,8 +505,8 @@ html,body{
 
 <div id="app" class="screen">
   <div class="topbar">
-    <div class="topbar-t" id="page-title">Главная</div>
-    <div class="topav" id="topav" onclick="goTab('ambassadors')">A</div>
+    <div class="topbar-t" id="page-title" onclick="secretTap()">Главная</div>
+    <div class="topav" id="topav" onclick="onTopAvClick()">A</div>
   </div>
 
   <!-- ГЛАВНАЯ -->
@@ -704,12 +702,6 @@ html,body{
     </button>
   </nav>
 </div>
-
-<!-- Кнопка админа -->
-
-<button id="admin-fab" onclick="openAdmin()">
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-</button>
 
 <!-- ══════════════════════════════════════
      ДЕТАЛЬНЫЙ ПРОСМОТР ПОСТА
@@ -1030,6 +1022,35 @@ function loadPosts() {
 }
 
 // ═══════════════════════════════════════════════════════
+// АВАТАР СВЕРХУ — для админа открывает админку, для всех — профиль
+// ═══════════════════════════════════════════════════════
+function onTopAvClick() {
+  if (isAdmin()) {
+    openAdmin();
+  } else {
+    goTab('ambassadors');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// СЕКРЕТНЫЙ ВХОД В АДМИНКУ — 5 тапов по заголовку страницы
+// ═══════════════════════════════════════════════════════
+var _secretTaps = 0, _secretTimer = null;
+function secretTap() {
+  _secretTaps++;
+  clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(function(){ _secretTaps = 0; }, 2000);
+  if (_secretTaps >= 5) {
+    _secretTaps = 0;
+    if (isAdmin()) {
+      openAdmin();
+    } else {
+      toast('Ваш ID: ' + (CU ? String(CU.id) : 'нет'));
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // BOOT — главная точка входа
 // ═══════════════════════════════════════════════════════
 function boot() {
@@ -1284,12 +1305,12 @@ function updateUI() {
   if (topav) {
     topav.textContent = init;
     topav.style.background = 'linear-gradient(135deg,'+( CU.col||'#3d5af1')+'cc,'+( CU.col||'#3d5af1')+')';
-    // Долгое нажатие 1.5с — войти в админку (или показать ID для отладки)
-    clearTimeout(topav._pt);
-    topav.onpointerdown = function(){ topav._pt = setTimeout(function(){
-      if(isAdmin()){ openAdmin(); } else { toast('Ваш ID: '+String(CU.id)); }
-    }, 1500); };
-    topav.onpointerup = topav.onpointercancel = topav.onpointerleave = function(){ clearTimeout(topav._pt); };
+    // Для админа — карандаш, для остальных — буква
+    if (isAdmin()) {
+      topav.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+    } else {
+      topav.textContent = init;
+    }
   }
   var amav = document.getElementById('am-av');
   if (amav) { amav.textContent = init; amav.style.background = CU.col || '#3d5af1'; }
@@ -1701,14 +1722,13 @@ function isAdmin() {
 }
 
 function checkAdminFab() {
-  var fab = document.getElementById('admin-fab');
-  if (!fab) return;
+  // Обновляем иконку аватара — карандаш для админа
+  var topav = document.getElementById('topav');
+  if (!topav || !CU) return;
   var admin = isAdmin();
-  console.log('checkAdminFab: CU.id=', CU ? CU.id : 'none', 'isAdmin=', admin, 'ADMIN_IDS=', ADMIN_IDS);
+  console.log('isAdmin=', admin, 'CU.id=', CU.id);
   if (admin) {
-    fab.classList.add('visible');
-  } else {
-    fab.classList.remove('visible');
+    topav.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   }
 }
 
