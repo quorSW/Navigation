@@ -140,6 +140,8 @@ html,body{
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px 10px;background:var(--bg2);
   border-bottom:1px solid var(--brd);flex-shrink:0;
+  position:fixed;top:0;left:0;right:0;z-index:40;
+  height:44px;box-sizing:border-box;
 }
 .topbar-t{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700}
 .topav{
@@ -150,9 +152,19 @@ html,body{
   cursor:pointer;box-shadow:0 2px 10px var(--glow);
 }
 
-.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab)+80px);background:var(--bg)}
+.page{
+  display:none;
+  position:fixed;
+  top:44px;
+  left:0;right:0;
+  bottom:var(--tab);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  background:var(--bg);
+  padding-bottom:24px;
+}
 .page.active{display:block}
-#page-ambassadors{padding-bottom:calc(var(--tab)+120px)}
+#page-ambassadors{padding-bottom:32px}
 
 /* Bottom nav */
 .bnav{
@@ -319,7 +331,7 @@ html,body{
 .lbn.me{color:var(--acc)}
 .lbs{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:var(--txt)}
 
-.amout{margin:10px 12px 24px;padding:14px;background:rgba(224,48,80,.09);border:1px solid rgba(224,48,80,.2);border-radius:13px;color:#ff8099;font-size:13px;font-weight:600;cursor:pointer;text-align:center}
+.amout{margin:10px 12px 16px;padding:14px;background:rgba(224,48,80,.09);border:1px solid rgba(224,48,80,.2);border-radius:13px;color:#ff8099;font-size:13px;font-weight:600;cursor:pointer;text-align:center}
 
 /* ═══════════ EMPTY ═══════════ */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;gap:8px}
@@ -643,7 +655,33 @@ html,body{
     </div>
     <div class="sec">Рейтинг <span id="lb-live" style="font-size:10px;color:var(--acc);font-family:'Manrope',sans-serif;font-weight:600;text-transform:none;letter-spacing:0"></span></div>
     <div class="lb" id="lb"></div>
-    <div class="amout" onclick="doLogout()">Выйти из аккаунта</div>
+
+```
+<div class="sec">Магазин баллов</div>
+<div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 12px 4px;margin-bottom:4px">
+  <div onclick="toast('Скоро')" style="flex-shrink:0;width:140px;border-radius:13px;overflow:hidden;background:var(--bg3);border:1px solid var(--brd);cursor:pointer">
+    <div style="height:80px;background:linear-gradient(135deg,#0a1855,#1e3a8a);display:flex;align-items:center;justify-content:center">
+      <svg width="36" height="36" viewBox="0 0 60 60"><use href="#i-build" color="white"/></svg>
+    </div>
+    <div style="padding:9px 10px"><div style="font-size:11px;font-weight:700;color:var(--txt);margin-bottom:2px">Курс «Инвестор»</div><div style="font-size:10px;color:var(--txt2)">50 000 баллов</div></div>
+  </div>
+  <div onclick="toast('Скоро')" style="flex-shrink:0;width:140px;border-radius:13px;overflow:hidden;background:var(--bg3);border:1px solid var(--brd);cursor:pointer">
+    <div style="height:80px;background:linear-gradient(135deg,#1a0840,#2a1260);display:flex;align-items:center;justify-content:center">
+      <svg width="36" height="36" viewBox="0 0 60 60"><use href="#i-chart" color="white"/></svg>
+    </div>
+    <div style="padding:9px 10px"><div style="font-size:11px;font-weight:700;color:var(--txt);margin-bottom:2px">Разбор портфеля</div><div style="font-size:10px;color:var(--txt2)">25 000 баллов</div></div>
+  </div>
+  <div onclick="toast('Скоро')" style="flex-shrink:0;width:140px;border-radius:13px;overflow:hidden;background:var(--bg3);border:1px solid var(--brd);cursor:pointer">
+    <div style="height:80px;background:linear-gradient(135deg,#062a18,#0a3a22);display:flex;align-items:center;justify-content:center">
+      <svg width="36" height="36" viewBox="0 0 60 60"><use href="#i-coin" color="white"/></svg>
+    </div>
+    <div style="padding:9px 10px"><div style="font-size:11px;font-weight:700;color:var(--txt);margin-bottom:2px">VIP-консультация</div><div style="font-size:10px;color:var(--txt2)">100 000 баллов</div></div>
+  </div>
+</div>
+
+<div class="amout" onclick="doLogout()">Выйти из аккаунта</div>
+```
+
   </div>
 
   <!-- Навигация -->
@@ -783,7 +821,7 @@ html,body{
 // ═══════════════════════════════════════════════════════
 // КОНСТАНТЫ И ДАННЫЕ
 // ═══════════════════════════════════════════════════════
-var ADMIN_IDS = ['5996401983','240326047']; // твой ID и папы
+var ADMIN_IDS = ['5996401983','240326047','1772084782230']; // твой ID, папы, и твой текущий
 
 var CAT_META = {
   'Инвестиции': {ico:'i-coin',  bg:'linear-gradient(135deg,#0a1855,#1e3a8a)'},
@@ -1243,7 +1281,16 @@ function updateUI() {
   if (!CU) return;
   var init = (CU.name || 'I')[0].toUpperCase();
   var topav = document.getElementById('topav');
-  if (topav) { topav.textContent = init; topav.style.background = 'linear-gradient(135deg,'+( CU.col||'#3d5af1')+'cc,'+( CU.col||'#3d5af1')+')'; }
+  if (topav) {
+    topav.textContent = init;
+    topav.style.background = 'linear-gradient(135deg,'+( CU.col||'#3d5af1')+'cc,'+( CU.col||'#3d5af1')+')';
+    // Долгое нажатие 1.5с — войти в админку (или показать ID для отладки)
+    clearTimeout(topav._pt);
+    topav.onpointerdown = function(){ topav._pt = setTimeout(function(){
+      if(isAdmin()){ openAdmin(); } else { toast('Ваш ID: '+String(CU.id)); }
+    }, 1500); };
+    topav.onpointerup = topav.onpointercancel = topav.onpointerleave = function(){ clearTimeout(topav._pt); };
+  }
   var amav = document.getElementById('am-av');
   if (amav) { amav.textContent = init; amav.style.background = CU.col || '#3d5af1'; }
   setEl('am-name', CU.name || 'Инвестор');
@@ -1641,13 +1688,28 @@ function toast(msg) {
 // ═══════════════════════════════════════════════════════
 function isAdmin() {
   if (!CU) return false;
-  var rawId = String(CU.id).replace('tg','');
-  return ADMIN_IDS.indexOf(rawId) >= 0 || ADMIN_IDS.indexOf(CU.id) >= 0;
+  // Проверяем все варианты ID
+  var id1 = String(CU.id);
+  var id2 = id1.replace('tg','');
+  var id3 = 'tg' + id2;
+  // Также проверяем email и сохранённый tgNumericId
+  var id4 = CU.tgNumericId ? String(CU.tgNumericId) : '';
+  return ADMIN_IDS.indexOf(id1) >= 0
+      || ADMIN_IDS.indexOf(id2) >= 0
+      || ADMIN_IDS.indexOf(id3) >= 0
+      || (id4 && ADMIN_IDS.indexOf(id4) >= 0);
 }
 
 function checkAdminFab() {
   var fab = document.getElementById('admin-fab');
-  if (fab) { if (isAdmin()) { fab.classList.add('visible'); } else { fab.classList.remove('visible'); } }
+  if (!fab) return;
+  var admin = isAdmin();
+  console.log('checkAdminFab: CU.id=', CU ? CU.id : 'none', 'isAdmin=', admin, 'ADMIN_IDS=', ADMIN_IDS);
+  if (admin) {
+    fab.classList.add('visible');
+  } else {
+    fab.classList.remove('visible');
+  }
 }
 
 function openAdmin() {
