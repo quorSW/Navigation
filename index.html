@@ -870,23 +870,49 @@ function fbSaveUser(u) {
   try {
     var tg = TG_USER || {};
     var ref = window.fsDoc(window.FS, 'users', String(u.id));
-    var favsList = Object.keys(FAVS || {});
-    window.fsSetDoc(ref, {
-      id:        String(u.id),
-      name:      u.name || 'Инвестор',
-      username:  u.username || tg.username || '',
-      phone:     u.phone || '',
-      email:     u.email || '',
-      refs:      u.refs  || 0,
-      pts:       u.pts   || 0,
-      col:       u.col   || '#3d5af1',
-      favorites: favsList,
-      favsCount: favsList.length,
-      ph:        u.ph || '',
-      platform:  /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Android/.test(navigator.userAgent) ? 'Android' : 'Web',
-      lastSeen:  new Date().toISOString(),
-      updatedAt: window.fsTs(),
-    }, { merge: true }).catch(function(e){ console.warn('fbSaveUser', e); });
+    var favsList = Object.keys(FAVS || {}).filter(function(id){
+      // Фильтруем дефолтные посты (d1,d2...) — они не в Firebase
+      return !String(id).match(/^d\d+$/);
+    });
+    // Сначала читаем текущие данные чтобы не затереть refs/pts
+    window.fsGetDoc(ref).then(function(snap) {
+      var existing = snap.exists() ? snap.data() : {};
+      // Берём максимум — не даём обнулить рефералы
+      var safeRefs = Math.max(existing.refs || 0, u.refs || 0);
+      var safePts  = Math.max(existing.pts  || 0, u.pts  || 0);
+      window.fsSetDoc(ref, {
+        id:        String(u.id),
+        name:      u.name || 'Инвестор',
+        username:  u.username || tg.username || '',
+        phone:     u.phone || '',
+        email:     u.email || '',
+        refs:      safeRefs,
+        pts:       safePts,
+        col:       u.col   || '#3d5af1',
+        favorites: favsList,
+        favsCount: favsList.length,
+        ph:        u.ph || '',
+        platform:  /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Android/.test(navigator.userAgent) ? 'Android' : 'Web',
+        lastSeen:  new Date().toISOString(),
+        updatedAt: window.fsTs(),
+      }, { merge: true }).catch(function(e){ console.warn('fbSaveUser setDoc', e); });
+    }).catch(function(){
+      // Если не смогли прочитать — пишем без перезаписи refs через merge
+      window.fsSetDoc(ref, {
+        id:        String(u.id),
+        name:      u.name || 'Инвестор',
+        username:  u.username || tg.username || '',
+        phone:     u.phone || '',
+        email:     u.email || '',
+        col:       u.col   || '#3d5af1',
+        favorites: favsList,
+        favsCount: favsList.length,
+        ph:        u.ph || '',
+        platform:  /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Android/.test(navigator.userAgent) ? 'Android' : 'Web',
+        lastSeen:  new Date().toISOString(),
+        updatedAt: window.fsTs(),
+      }, { merge: true }).catch(function(e){ console.warn('fbSaveUser fallback', e); });
+    });
   } catch(e) { console.warn(e); }
 }
 
@@ -1187,13 +1213,27 @@ function finishLogin(found, users) {
   }
   CU   = found;
   FAVS = getFavs(CU.id);
-  // Загружаем избранное из Firebase если есть
-  if (found.favorites && found.favorites.length) {
-    found.favorites.forEach(function(id){ FAVS[id] = 1; });
-    saveFavs(CU.id, FAVS);
-  }
   saveSess(CU);
-  waitFB(function(){ fbSaveUser(CU); });
+  // Тянем актуальные данные из Firebase (рефералы, баллы, избранное)
+  waitFB(function(){
+    var ref = window.fsDoc(window.FS, 'users', String(CU.id));
+    window.fsGetDoc(ref).then(function(snap) {
+      if (snap.exists()) {
+        var d = snap.data();
+        // Восстанавливаем рефералы и баллы — берём максимум из локального и Firebase
+        CU.refs = Math.max(d.refs || 0, CU.refs || 0);
+        CU.pts  = Math.max(d.pts  || 0, CU.pts  || 0);
+        // Восстанавливаем избранное
+        if (d.favorites && d.favorites.length) {
+          d.favorites.forEach(function(id){ FAVS[id] = 1; });
+          saveFavs(CU.id, FAVS);
+        }
+        saveSess(CU);
+        updateUI();
+      }
+      fbSaveUser(CU);
+    }).catch(function(){ fbSaveUser(CU); });
+  });
   launch();
 }
 
