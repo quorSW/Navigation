@@ -870,10 +870,13 @@ function fbSaveUser(u) {
   try {
     var tg = TG_USER || {};
     var ref = window.fsDoc(window.FS, 'users', String(u.id));
-    var favsList = Object.keys(FAVS || {}).filter(function(id){
-      // Фильтруем дефолтные посты (d1,d2...) — они не в Firebase
+    // Читаем избранное из localStorage (FAVS может быть пустым при первом входе)
+    var storedFavs = getFavs(String(u.id));
+    var mergedFavs = Object.assign({}, storedFavs, FAVS || {});
+    var favsList = Object.keys(mergedFavs).filter(function(id){
       return !String(id).match(/^d\d+$/);
     });
+    var favsCount = favsList.length;
     // Сначала читаем текущие данные чтобы не затереть refs/pts
     window.fsGetDoc(ref).then(function(snap) {
       var existing = snap.exists() ? snap.data() : {};
@@ -890,7 +893,7 @@ function fbSaveUser(u) {
         pts:       safePts,
         col:       u.col   || '#3d5af1',
         favorites: favsList,
-        favsCount: favsList.length,
+        favsCount: favsCount,
         ph:        u.ph || '',
         platform:  /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Android/.test(navigator.userAgent) ? 'Android' : 'Web',
         lastSeen:  new Date().toISOString(),
@@ -906,7 +909,7 @@ function fbSaveUser(u) {
         email:     u.email || '',
         col:       u.col   || '#3d5af1',
         favorites: favsList,
-        favsCount: favsList.length,
+        favsCount: favsCount,
         ph:        u.ph || '',
         platform:  /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Android/.test(navigator.userAgent) ? 'Android' : 'Web',
         lastSeen:  new Date().toISOString(),
@@ -1938,7 +1941,7 @@ function admLoadUsers() {
         +(u.phone ? '<span style="font-size:12px;color:var(--txt2)">📞 '+u.phone+'</span>' : '')
         +(u.username ? '<a href="https://t.me/'+u.username+'" target="_blank" style="font-size:11px;background:rgba(61,90,241,.15);color:#818cf8;padding:4px 10px;border-radius:7px;text-decoration:none;font-weight:700">✉️ Написать</a>' : '')
         +'</div>'
-        +(!isMe ? '<button class="adm-ref-btn" onclick="admGiveRef(\''+u.docId+'\',\''+esc(u.name||'')+'\')">+ Зачислить реферал вручную</button>' : '')
+        +(!isMe ? '<div style="display:flex;gap:6px;margin-bottom:4px"><button class="adm-ref-btn" style="flex:1" onclick="admGiveRef(\''+u.docId+'\',\''+esc(u.name||'')+'\')">🔗 Реферал</button><button class="adm-ref-btn" style="flex:1;background:rgba(11,170,110,.1);border-color:rgba(11,170,110,.3);color:#34d399" onclick="admAddRefs(\''+u.docId+'\',\''+esc(u.name||'')+'\')">➕ Выдать</button></div>' : '')
         +(u.lastSeen ? '<div style="font-size:10px;color:#555;margin-top:6px">Вход: '+new Date(u.lastSeen).toLocaleString('ru')+'</div>' : '')
         +'</div>';
     });
@@ -1963,6 +1966,49 @@ function admGiveRef(toDocId, toName) {
     ov.remove();
     fbAddRef(invId, toDocId);
     toast('🎯 Зачисляется...');
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// ВЫДАТЬ РЕФЕРАЛЫ НАПРЯМУЮ (только для админов)
+// ═══════════════════════════════════════════════════════
+function admAddRefs(docId, toName) {
+  var ov = document.createElement('div');
+  ov.className = 'confirm-overlay';
+  ov.innerHTML = '<div class="confirm-box" style="text-align:left">'
+    + '<div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px">➕ Выдать рефералы</div>'
+    + '<div style="font-size:12px;color:var(--txt2);margin-bottom:16px">Кому: <b style="color:#34d399">' + esc(toName) + '</b></div>'
+    + '<div style="font-size:12px;color:var(--txt2);margin-bottom:8px">Количество рефералов:</div>'
+    + '<input id="refs-n" type="number" min="1" max="999" value="1" style="width:100%;background:var(--bg4);border:1.5px solid var(--acc);border-radius:10px;padding:12px;color:var(--txt);font-size:26px;font-weight:700;font-family:Unbounded,sans-serif;outline:none;box-sizing:border-box;margin-bottom:6px;text-align:center">'
+    + '<div style="font-size:11px;color:var(--txt2);margin-bottom:16px">+100 баллов за каждый реферал</div>'
+    + '<div class="confirm-row">'
+    + '<button class="confirm-cancel" onclick="this.closest(\'.confirm-overlay\').remove()">Отмена</button>'
+    + '<button class="confirm-ok" style="background:linear-gradient(135deg,#0baa6e,#059669)" id="aref-ok">Выдать</button>'
+    + '</div></div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){ var el = document.getElementById('refs-n'); if (el) { el.focus(); el.select(); } }, 100);
+  ov.querySelector('#aref-ok').onclick = function() {
+    var n = parseInt(document.getElementById('refs-n').value) || 0;
+    if (n < 1)   { toast('Введи количество'); return; }
+    if (n > 999) { toast('Максимум 999');     return; }
+    ov.remove();
+    var ref = window.fsDoc(window.FS, 'users', String(docId));
+    window.fsUpdate(ref, {
+      refs: window.fsInc(n),
+      pts:  window.fsInc(n * 100),
+    }).then(function() {
+      var word = n === 1 ? 'реферал' : (n < 5 ? 'реферала' : 'рефералов');
+      toast('✅ +' + n + ' ' + word + ' выдано!');
+      admLoadUsers();
+      // Если выдаём текущему юзеру — обновляем UI сразу
+      if (CU && String(docId).replace('tg','') === String(CU.id).replace('tg','')) {
+        CU.refs = (CU.refs || 0) + n;
+        CU.pts  = (CU.pts  || 0) + (n * 100);
+        saveSess(CU);
+        updateUI();
+        renderLevels();
+      }
+    }).catch(function(e) { toast('Ошибка: ' + e.message); });
   };
 }
 
