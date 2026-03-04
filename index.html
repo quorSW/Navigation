@@ -870,6 +870,7 @@ function fbSaveUser(u) {
   try {
     var tg = TG_USER || {};
     var ref = window.fsDoc(window.FS, 'users', String(u.id));
+    var favsList = Object.keys(FAVS || {});
     window.fsSetDoc(ref, {
       id:        String(u.id),
       name:      u.name || 'Инвестор',
@@ -879,6 +880,9 @@ function fbSaveUser(u) {
       refs:      u.refs  || 0,
       pts:       u.pts   || 0,
       col:       u.col   || '#3d5af1',
+      favorites: favsList,
+      favsCount: favsList.length,
+      ph:        u.ph || '',
       platform:  /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Android/.test(navigator.userAgent) ? 'Android' : 'Web',
       lastSeen:  new Date().toISOString(),
       updatedAt: window.fsTs(),
@@ -1151,9 +1155,27 @@ function doLogin() {
     if (users[keys[i]].email === email) { found = users[keys[i]]; break; }
   }
 
-  if (!found) { showErr('err-login', 'Email не найден. Сначала зарегистрируйтесь.'); return; }
-  if (found.ph !== hashPw(pass)) { showErr('err-login', 'Неверный пароль'); return; }
+  if (found) {
+    // Нашли локально — проверяем пароль
+    if (found.ph !== hashPw(pass)) { showErr('err-login', 'Неверный пароль'); return; }
+    finishLogin(found, users);
+  } else {
+    // Не нашли локально — ищем в Firebase
+    var btn = document.getElementById('btn-do-login');
+    btn.textContent = 'Ищем...'; btn.disabled = true;
+    fbFindUserByEmail(email, pass, function(fbUser, err) {
+      btn.textContent = 'ВОЙТИ В АККАУНТ'; btn.disabled = false;
+      if (err) { showErr('err-login', err); return; }
+      // Сохраняем найденного пользователя локально
+      var u = getUsers();
+      u[fbUser.id] = fbUser;
+      saveUsers(u);
+      finishLogin(fbUser, u);
+    });
+  }
+}
 
+function finishLogin(found, users) {
   // Применяем TG ID если есть
   if (TG_USER && TG_USER.id && found.id !== TG_USER.id) {
     delete users[found.id];
@@ -1163,12 +1185,37 @@ function doLogin() {
     users[TG_USER.id] = found;
     saveUsers(users);
   }
-
   CU   = found;
   FAVS = getFavs(CU.id);
+  // Загружаем избранное из Firebase если есть
+  if (found.favorites && found.favorites.length) {
+    found.favorites.forEach(function(id){ FAVS[id] = 1; });
+    saveFavs(CU.id, FAVS);
+  }
   saveSess(CU);
   waitFB(function(){ fbSaveUser(CU); });
   launch();
+}
+
+// Поиск пользователя в Firebase по email
+function fbFindUserByEmail(email, pass, cb) {
+  if (!window.FB_READY) { cb(null, 'Firebase недоступен. Попробуйте позже.'); return; }
+  window.fsGetDocs(window.fsColl(window.FS, 'users')).then(function(snap) {
+    var found = null;
+    snap.forEach(function(d) {
+      var u = d.data();
+      if (u.email && u.email.toLowerCase() === email.toLowerCase()) {
+        found = u;
+      }
+    });
+    if (!found) { cb(null, 'Email не найден. Сначала зарегистрируйтесь.'); return; }
+    // Проверяем пароль
+    if (!found.ph) { cb(null, 'Аккаунт найден, но войти нельзя — обратитесь в поддержку.'); return; }
+    if (found.ph !== hashPw(pass)) { cb(null, 'Неверный пароль'); return; }
+    cb(found, null);
+  }).catch(function(e) {
+    cb(null, 'Ошибка подключения: ' + e.message);
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1504,7 +1551,12 @@ function toggleFav(id, btn) {
     btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
     toast('Добавлено в подборки');
   }
-  if (CU) { saveFavs(CU.id, FAVS); setEl('am-favs', Object.keys(FAVS).length); }
+  if (CU) {
+    saveFavs(CU.id, FAVS);
+    setEl('am-favs', Object.keys(FAVS).length);
+    // Сохраняем избранное в Firebase
+    waitFB(function(){ fbSaveUser(CU); });
+  }
   // обновляем звезду в детальном просмотре
   updateDetFavBtn();
 }
